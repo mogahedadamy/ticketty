@@ -1,4 +1,5 @@
 import { DriverStatus } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsDateString,
   IsEnum,
@@ -68,7 +69,7 @@ export class UpdateDriverDto {
   branchId?: string;
 }
 
-export class QueryDriverDto {
+export class QueryDriverDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)

@@ -6,12 +6,17 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { requireOrgId } from '../common/org';
-import { CreateSeatTemplateDto, UpdateSeatTemplateDto } from './dto';
+import {
+  CreateSeatTemplateDto,
+  QueryFleetDto,
+  UpdateSeatTemplateDto,
+} from './dto';
 import { SeatTemplatesService } from './seat-templates.service';
 
 @Controller('seat-templates')
@@ -26,8 +31,8 @@ export class SeatTemplatesController {
 
   @Get()
   @Permissions('fleet.read')
-  findAll(@CurrentUser() user: AuthUser) {
-    return this.service.findAll(requireOrgId(user));
+  findAll(@CurrentUser() user: AuthUser, @Query() query: QueryFleetDto) {
+    return this.service.findAll(requireOrgId(user), query);
   }
 
   @Get(':id')

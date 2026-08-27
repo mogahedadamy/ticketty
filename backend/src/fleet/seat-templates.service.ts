@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SeatType } from '@prisma/client';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSeatTemplateDto, UpdateSeatTemplateDto } from './dto';
+import {
+  CreateSeatTemplateDto,
+  QueryFleetDto,
+  UpdateSeatTemplateDto,
+} from './dto';
 
 function columnLetter(column: number): string {
   return String.fromCharCode(64 + column);
@@ -54,14 +59,15 @@ export class SeatTemplatesService {
     });
   }
 
-  findAll(orgId: string) {
+  findAll(orgId: string, query: QueryFleetDto = {}) {
     return this.prisma.seatTemplate.findMany({
       where: { organizationId: orgId },
       include: {
         seats: { orderBy: [{ row: 'asc' }, { column: 'asc' }] },
         _count: { select: { buses: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

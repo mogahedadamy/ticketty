@@ -1,4 +1,5 @@
 import { BusStatus, SeatType } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -151,3 +152,5 @@ export class UpdateBusDto {
   @IsEnum(BusStatus)
   status?: BusStatus;
 }
+
+export class QueryFleetDto extends PaginationQueryDto {}

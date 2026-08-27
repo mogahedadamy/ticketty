@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { requireOrgId } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDriverDto, QueryDriverDto, UpdateDriverDto } from './dto';
@@ -55,7 +56,8 @@ export class DriversService {
     return this.prisma.driver.findMany({
       where,
       include: { branch: true, _count: { select: { trips: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

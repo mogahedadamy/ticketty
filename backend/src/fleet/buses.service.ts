@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { requireOrgId, tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateBusDto, UpdateBusDto } from './dto';
+import { CreateBusDto, QueryFleetDto, UpdateBusDto } from './dto';
 
 @Injectable()
 export class BusesService {
@@ -28,11 +29,12 @@ export class BusesService {
     });
   }
 
-  findAll(user: AuthUser) {
+  findAll(user: AuthUser, query: QueryFleetDto = {}) {
     return this.prisma.bus.findMany({
       where: tenantScope(user),
       include: { seatTemplate: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

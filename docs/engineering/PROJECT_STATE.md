@@ -1,11 +1,11 @@
 # Ticketty Project State
 
-_Last verified: 2026-08-27T12:29:01+02:00_
+_Last verified: 2026-08-27T12:48:17+02:00_
 
 ## Executive status
 
-- Overall evidence-based completion: **70% (functional, not production-ready)**.
-- Production-readiness controls: **81% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and production-like operational release gates close**.
+- Overall evidence-based completion: **71% (functional, not production-ready)**.
+- Production-readiness controls: **83% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and production-like operational release gates close**.
 - Strategy: preserve the working vertical slice and harden it incrementally; do not rewrite from scratch.
 - Repository branch: `master`; repository currently has no commits and all project files are untracked.
 
@@ -72,7 +72,8 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Hardened BFF mutation origin checks, upstream timeouts, proxy response handling, JWT-aligned cookie expiry, and request-ID propagation.
 - Established the first Web test baseline with 2 suites / 7 security and configuration helper tests.
 - Added bounded trusted-proxy configuration and restricted report queries to validated date-only ranges of at most 366 days.
-- Added validated bounded pagination to high-volume lists and replaced agent lifetime relation loading with page-scoped database aggregates.
+- Added validated bounded pagination to all top-level operational and reference lists and replaced agent lifetime relation loading with page-scoped database aggregates.
+- Added CSP, HSTS in production, and cross-domain policy response headers to the Web application.
 - Added automated permission metadata coverage for every business endpoint and enforced role-assignment grant ceilings.
 - Added a stable sanitized API error envelope with request IDs and safe Prisma mappings.
 - Added persistent failed-login counting and a 15-minute database-backed account lockout after five failures.
@@ -88,6 +89,7 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - `backend: pnpm audit --prod` — no known vulnerabilities after the patched transitive override.
 - `web: pnpm lint:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build` — passed; 2 suites / 7 tests, standalone server output, and 16 generated routes.
 - `web: pnpm audit --prod` — no known vulnerabilities.
+- Standalone Web production server was started on port 3100 and its liveness endpoint, CSP, HSTS, frame, and content-type headers were verified.
 - `docker compose config` — passed. Image builds were not executable locally because the Docker daemon is unavailable; CI includes both image builds.
 
 ## Blockers

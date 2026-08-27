@@ -8,6 +8,10 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import {
+  PaginationQueryDto,
+  paginationArgs,
+} from '../common/dto/pagination-query.dto';
 import { requireOrgId } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -71,11 +75,12 @@ export class AdministrationService {
     );
     return updated;
   }
-  branches(user: AuthUser) {
+  branches(user: AuthUser, query: PaginationQueryDto = {}) {
     return this.prisma.branch.findMany({
       where: { organizationId: requireOrgId(user) },
       include: { _count: { select: { users: true, trips: true } } },
-      orderBy: { name: 'asc' },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      ...paginationArgs(query),
     });
   }
   async createBranch(user: AuthUser, dto: CreateBranchDto) {
@@ -87,13 +92,14 @@ export class AdministrationService {
     await this.audit.log(user, 'BRANCH_CREATED', 'Branch', branch.id);
     return branch;
   }
-  roles(user: AuthUser) {
+  roles(user: AuthUser, query: PaginationQueryDto = {}) {
     return this.prisma.role.findMany({
       where: {
         OR: [{ organizationId: requireOrgId(user) }, { organizationId: null }],
       },
       include: { _count: { select: { users: true } } },
-      orderBy: { nameAr: 'asc' },
+      orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
+      ...paginationArgs(query),
     });
   }
   async createRole(user: AuthUser, dto: CreateRoleDto) {
@@ -110,7 +116,7 @@ export class AdministrationService {
     await this.audit.log(user, 'ROLE_CREATED', 'Role', role.id);
     return role;
   }
-  users(user: AuthUser) {
+  users(user: AuthUser, query: PaginationQueryDto = {}) {
     return this.prisma.user.findMany({
       where: { organizationId: requireOrgId(user) },
       select: {
@@ -126,7 +132,8 @@ export class AdministrationService {
           select: { id: true, key: true, nameAr: true, permissions: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
   async createUser(user: AuthUser, dto: CreateUserDto) {

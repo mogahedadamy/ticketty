@@ -1,7 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { AdministrationService } from './administration.service';
 import {
   CreateBranchDto,
@@ -26,8 +35,9 @@ export class AdministrationController {
   }
   @Get('branches') @Permissions('settings.read') branches(
     @CurrentUser() u: AuthUser,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.service.branches(u);
+    return this.service.branches(u, query);
   }
   @Post('branches') @Permissions('settings.write') createBranch(
     @CurrentUser() u: AuthUser,
@@ -37,8 +47,9 @@ export class AdministrationController {
   }
   @Get('roles') @Permissions('settings.read') roles(
     @CurrentUser() u: AuthUser,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.service.roles(u);
+    return this.service.roles(u, query);
   }
   @Post('roles') @Permissions('settings.write') createRole(
     @CurrentUser() u: AuthUser,
@@ -48,8 +59,9 @@ export class AdministrationController {
   }
   @Get('users') @Permissions('settings.read') users(
     @CurrentUser() u: AuthUser,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.service.users(u);
+    return this.service.users(u, query);
   }
   @Post('users') @Permissions('settings.write') createUser(
     @CurrentUser() u: AuthUser,

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { requireOrgId, tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRouteDto, QueryRouteDto, UpdateRouteDto } from './dto';
@@ -40,7 +41,8 @@ export class RoutesService {
     return this.prisma.route.findMany({
       where,
       include: { _count: { select: { trips: true } }, stops: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

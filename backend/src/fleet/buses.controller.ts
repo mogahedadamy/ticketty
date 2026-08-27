@@ -6,12 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { BusesService } from './buses.service';
-import { CreateBusDto, UpdateBusDto } from './dto';
+import { CreateBusDto, QueryFleetDto, UpdateBusDto } from './dto';
 
 @Controller('buses')
 export class BusesController {
@@ -25,8 +26,8 @@ export class BusesController {
 
   @Get()
   @Permissions('fleet.read')
-  findAll(@CurrentUser() user: AuthUser) {
-    return this.service.findAll(user);
+  findAll(@CurrentUser() user: AuthUser, @Query() query: QueryFleetDto) {
+    return this.service.findAll(user, query);
   }
 
   @Get(':id')

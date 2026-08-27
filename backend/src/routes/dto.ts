@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsArray,
   IsBoolean,
@@ -104,7 +105,7 @@ export class UpdateRouteDto {
   stops?: RouteStopDto[];
 }
 
-export class QueryRouteDto {
+export class QueryRouteDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)

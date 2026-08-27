@@ -19,6 +19,8 @@
 - Added backward-compatible `page`/`limit` bounds (50 default, 200 maximum) and stable ordering to high-volume operational lists.
 - Replaced per-agent lifetime commission/settlement materialization with page-scoped database aggregation.
 - Added permission-guard behavior tests and a metadata gate proving every business route declares explicit permissions.
+- Extended bounded pagination to routes, drivers, buses, seat templates, branches, roles, and users so no top-level resource list remains unbounded.
+- Added a restrictive baseline Content Security Policy, HSTS in production, and cross-domain policy headers to the web application.
 - Added a global sanitized API error envelope with stable codes, request correlation, and safe Prisma conflict/reference/not-found mappings.
 - Added a permission grant ceiling for custom role creation and role assignment, preventing delegated administrators from escalating beyond their own permissions.
 - Added persistent failed-login counters, timed account lockout, automatic reset on successful authentication, and database constraints.
