@@ -6,10 +6,11 @@ import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   const findUnique = jest.fn();
+  const updateUser = jest.fn();
   const createAuditLog = jest.fn();
   const signAsync = jest.fn();
   const prisma = {
-    user: { findUnique },
+    user: { findUnique, update: updateUser },
     auditLog: { create: createAuditLog },
   } as unknown as PrismaService;
   const jwt = { signAsync } as unknown as JwtService;
@@ -17,6 +18,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    updateUser.mockResolvedValue({ failedLoginAttempts: 1 });
   });
 
   it('normalizes the email, signs a token, and records the login', async () => {
@@ -43,6 +45,14 @@ describe('AuthService', () => {
     expect(findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { email: 'owner@ticketty.sd' } }),
     );
+    expect(updateUser).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: expect.any(Date) as unknown,
+      },
+    });
     expect(signAsync).toHaveBeenCalledWith(
       expect.objectContaining({ sub: 'user-1', orgId: 'org-1' }),
     );
@@ -61,7 +71,11 @@ describe('AuthService', () => {
 
   it('rejects a wrong password without signing a token', async () => {
     findUnique.mockResolvedValue({
+      id: 'user-1',
+      organizationId: 'org-1',
       active: true,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
       passwordHash: await bcrypt.hash('correct-password', 4),
       role: { key: 'OWNER', permissions: ['*'] },
       organization: { active: true },
@@ -70,6 +84,11 @@ describe('AuthService', () => {
     await expect(
       service.login('owner@ticketty.sd', 'wrong-password'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(updateUser).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
     expect(signAsync).not.toHaveBeenCalled();
     expect(createAuditLog).not.toHaveBeenCalled();
   });
@@ -87,6 +106,45 @@ describe('AuthService', () => {
       service.login('owner@ticketty.sd', 'strong-password'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(signAsync).not.toHaveBeenCalled();
+  });
+
+  it('rejects a currently locked user without checking the password', async () => {
+    findUnique.mockResolvedValue({
+      id: 'user-1',
+      organizationId: 'org-1',
+      active: true,
+      lockedUntil: new Date(Date.now() + 60_000),
+      passwordHash: await bcrypt.hash('strong-password', 4),
+      role: { key: 'OWNER', permissions: ['*'] },
+      organization: { active: true },
+    });
+    await expect(
+      service.login('owner@ticketty.sd', 'strong-password'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it('locks the account after the fifth failed attempt', async () => {
+    findUnique.mockResolvedValue({
+      id: 'user-1',
+      organizationId: 'org-1',
+      active: true,
+      lockedUntil: null,
+      passwordHash: await bcrypt.hash('correct-password', 4),
+      role: { key: 'OWNER', permissions: ['*'] },
+      organization: { active: true },
+    });
+    updateUser.mockResolvedValueOnce({ failedLoginAttempts: 5 });
+
+    await expect(
+      service.login('owner@ticketty.sd', 'wrong-password'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(updateUser).toHaveBeenNthCalledWith(2, {
+      where: { id: 'user-1' },
+      data: { lockedUntil: expect.any(Date) as unknown },
+    });
   });
 
   it('rejects an organization-less tenant user', async () => {

@@ -3,6 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -29,10 +32,25 @@ export class AuthService {
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
+    const now = new Date();
+    if (user.lockedUntil && user.lockedUntil > now) {
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
     }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      await this.recordFailedAttempt(user.id);
+      throw new UnauthorizedException('بيانات الدخول غير صحيحة');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: now,
+      },
+    });
 
     const payload = {
       sub: user.id,
@@ -68,5 +86,19 @@ export class AuthService {
         permissions: user.role.permissions,
       },
     };
+  }
+
+  private async recordFailedAttempt(userId: string): Promise<void> {
+    const failed = await this.prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
+    if (failed.failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) },
+      });
+    }
   }
 }

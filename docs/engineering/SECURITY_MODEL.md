@@ -26,7 +26,7 @@ Organization and branch IDs from the client are identifiers to validate, never a
 - Known writable related-ID paths now validate tenant/branch scope transactionally, but database-level tenant consistency and RLS remain absent.
 - Agent own-vs-all is implemented for core resources, but the complete endpoint authorization matrix is not yet proven.
 - Core refund/trip-state races have contention tests; broader lifecycle and load proof remains.
-- JWT key rotation/revocation and centralized secret management remain absent.
+- Database-backed account lockout now limits repeated password attempts; JWT key rotation/revocation and centralized secret management remain absent.
 - Audit event coverage remains partial; request correlation is now implemented.
 - Role creation and assignment now enforce a grant ceiling so delegated administrators cannot grant permissions they do not possess; PII exposure still needs more granular projections/permissions.
 - In-memory throttling is not suitable for multiple instances.
