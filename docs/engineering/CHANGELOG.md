@@ -22,6 +22,8 @@
 - Added a global sanitized API error envelope with stable codes, request correlation, and safe Prisma conflict/reference/not-found mappings.
 - Added a permission grant ceiling for custom role creation and role assignment, preventing delegated administrators from escalating beyond their own permissions.
 - Added persistent failed-login counters, timed account lockout, automatic reset on successful authentication, and database constraints.
+- Fixed backup/restore scripts to accept Prisma PostgreSQL URLs containing `schema` parameters.
+- Completed an isolated PostgreSQL backup/restore drill with checksum verification, migration verification, and all SQL integrity contracts passing.
 - Executable PostgreSQL backup/restore scripts and deployment/restore runbooks.
 
 ### Changed

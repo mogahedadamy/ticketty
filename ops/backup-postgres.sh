@@ -7,6 +7,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 2
 fi
 
+postgres_url="$(POSTGRES_URL_INPUT="$DATABASE_URL" node -e "const u=new URL(process.env.POSTGRES_URL_INPUT);u.searchParams.delete('schema');process.stdout.write(u.toString())")"
 backup_dir="${BACKUP_DIR:-$(pwd)/backups}"
 mkdir -p "$backup_dir"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -18,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-pg_dump "$DATABASE_URL" \
+pg_dump "$postgres_url" \
   --format=custom \
   --no-owner \
   --no-acl \

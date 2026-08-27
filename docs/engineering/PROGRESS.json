@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "measuredAt": "2026-08-27T12:23:34+02:00",
+  "measuredAt": "2026-08-27T12:29:01+02:00",
   "overall": 70,
-  "productionReadiness": 80,
+  "productionReadiness": 81,
   "weights": {
     "architecture": 8,
     "database": 10,
@@ -39,7 +39,7 @@
     "Repository still has no reviewed version-control baseline",
     "Production container execution has not yet been verified"
   ],
-  "lastValidatedAt": "2026-08-27T12:23:34+02:00",
+  "lastValidatedAt": "2026-08-27T12:29:01+02:00",
   "lastValidated": {
     "backendTests": "21 suites, 83 tests passed; e2e 3 suites, 9 tests passed",
     "databaseContracts": "refund, tenant consistency, and settlement integrity passed",
@@ -51,7 +51,8 @@
     "webTypecheck": "passed",
     "webAudit": "passed",
     "backendAudit": "passed after patched transitive override",
-    "composeConfig": "passed; image builds await a Docker-enabled environment"
+    "composeConfig": "passed; image builds await a Docker-enabled environment",
+    "restoreDrill": "local isolated PostgreSQL restore passed in approximately 8 seconds with checksum, 18 migrations, and all SQL integrity contracts"
   },
   "nextActions": [
     "Implement and prove transaction-bound runtime RLS",

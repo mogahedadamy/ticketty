@@ -1,11 +1,11 @@
 # Ticketty Project State
 
-_Last verified: 2026-08-27T12:23:34+02:00_
+_Last verified: 2026-08-27T12:29:01+02:00_
 
 ## Executive status
 
 - Overall evidence-based completion: **70% (functional, not production-ready)**.
-- Production-readiness controls: **80% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
+- Production-readiness controls: **81% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and production-like operational release gates close**.
 - Strategy: preserve the working vertical slice and harden it incrementally; do not rewrite from scratch.
 - Repository branch: `master`; repository currently has no commits and all project files are untracked.
 
@@ -31,7 +31,7 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 5. Settlement service now excludes reversals, rejects overlapping periods, serializes generation, and prevents rewriting settled records; immutable line allocation and database uniqueness remain missing.
 6. Active runtime schema lacks double-entry accounting.
 7. Critical integration/concurrency/security test coverage is very low.
-8. CI, container definitions, health probes, request-correlation logs, and backup/restore tooling now exist; hosted metrics/alerts and a proven restore drill remain missing.
+8. CI, container definitions, health probes, request-correlation logs, and backup/restore tooling exist; a local scratch restore drill passed, while hosted metrics/alerts and a production-like restore drill remain missing.
 
 ## Changes in this cycle
 
@@ -76,6 +76,7 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Added automated permission metadata coverage for every business endpoint and enforced role-assignment grant ceilings.
 - Added a stable sanitized API error envelope with request IDs and safe Prisma mappings.
 - Added persistent failed-login counting and a 15-minute database-backed account lockout after five failures.
+- Fixed backup/restore handling for Prisma-style `?schema=` URLs and completed an isolated PostgreSQL restore drill with all database integrity contracts passing.
 
 ## Last validated commands
 

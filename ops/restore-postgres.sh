@@ -14,6 +14,7 @@ if [[ -n "${DATABASE_URL:-}" && "$RESTORE_DATABASE_URL" == "$DATABASE_URL" && "$
   exit 2
 fi
 
+postgres_url="$(POSTGRES_URL_INPUT="$RESTORE_DATABASE_URL" node -e "const u=new URL(process.env.POSTGRES_URL_INPUT);u.searchParams.delete('schema');process.stdout.write(u.toString())")"
 backup_file="$1"
 if [[ ! -f "$backup_file" ]]; then
   echo "Backup not found: $backup_file" >&2
@@ -29,7 +30,7 @@ pg_restore \
   --single-transaction \
   --no-owner \
   --no-acl \
-  --dbname "$RESTORE_DATABASE_URL" \
+  --dbname "$postgres_url" \
   "$backup_file"
 
 printf 'Restore completed into the configured scratch database. Run migrations and integrity smoke tests before approval.\n'
