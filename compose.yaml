@@ -27,6 +27,7 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-ticketty-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ticketty-web}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
       PORT: 3001
     depends_on:
       postgres:

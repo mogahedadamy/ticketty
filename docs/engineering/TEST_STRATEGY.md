@@ -2,7 +2,7 @@
 
 ## Current evidence
 
-- Backend: 15 Jest suites / 40 tests after the current hardening cycle.
+- Backend: 16 Jest suites / 43 tests after the current hardening cycle.
 - Backend E2E: 3 suites / 7 tests covering production-equivalent app bootstrap, health, refund contention, booking-vs-trip cancellation, and cross-agent isolation.
 - PostgreSQL contract scripts cover refund, tenant, and settlement integrity and pass against the migrated local database.
 - Frontend: 2 Vitest suites / 7 tests cover server environment, origin, request-ID, and JWT-expiry helpers; lint, strict TypeScript, and production build pass. Component/browser tests remain absent.

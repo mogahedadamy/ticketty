@@ -5,6 +5,12 @@ import helmet from 'helmet';
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
 
+  const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
+  const httpAdapter = app.getHttpAdapter().getInstance() as {
+    set(name: string, value: number): void;
+  };
+  httpAdapter.set('trust proxy', trustProxyHops);
+
   app.setGlobalPrefix('api');
   app.use(helmet());
   app.enableCors({

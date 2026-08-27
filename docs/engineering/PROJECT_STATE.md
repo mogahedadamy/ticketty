@@ -71,10 +71,11 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Centralized validated web server configuration and removed inconsistent API defaults.
 - Hardened BFF mutation origin checks, upstream timeouts, proxy response handling, JWT-aligned cookie expiry, and request-ID propagation.
 - Established the first Web test baseline with 2 suites / 7 security and configuration helper tests.
+- Added bounded trusted-proxy configuration and restricted report queries to validated date-only ranges of at most 366 days.
 
 ## Last validated commands
 
-- `backend: pnpm test --runInBand` — passed: 15 suites, 40 tests.
+- `backend: pnpm test --runInBand` — passed: 16 suites, 43 tests.
 - `backend: pnpm test:e2e --runInBand` — passed: 3 suites, 7 tests, including production-equivalent health/bootstrap, refund contention, booking-cancel versus trip-cancel, and cross-agent isolation.
 - Backend refund, tenant-consistency, and settlement SQL contract scripts — passed.
 - `backend: pnpm lint:check`, `pnpm typecheck`, `pnpm build`, and `pnpm exec prisma validate` — passed.

@@ -33,6 +33,7 @@ export class RequestContextMiddleware implements NestMiddleware {
           method: request.method,
           path: request.path,
           statusCode: response.statusCode,
+          clientIp: request.ip,
           durationMs: Math.round(durationMs * 100) / 100,
         }),
       );

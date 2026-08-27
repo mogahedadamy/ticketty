@@ -15,15 +15,19 @@ Organization and branch IDs from the client are identifiers to validate, never a
 - Active user/organization revalidation per protected request.
 - Helmet, constrained CORS, input validation, and rate limiting.
 - HttpOnly/SameSite web session cookie through a BFF; no sensitive token in Local Storage.
-- Environment files ignored by Git.
+- Environment files ignored by Git; checked-in examples contain placeholders only.
+- Fail-fast backend and server-side web configuration validation.
+- JWT verification pins HS256, issuer, and audience; BFF cookie lifetime follows token expiry.
+- Strict same-origin checks on state-changing BFF requests.
+- Sanitized request IDs propagate through the BFF and backend structured completion logs.
 
 ## Open high risks
 
 - Known writable related-ID paths now validate tenant/branch scope transactionally, but database-level tenant consistency and RLS remain absent.
-- Agent own-vs-all/BOLA policy gaps.
-- Refund and trip-state race conditions.
-- Weak startup secret/config validation; no JWT issuer/audience/rotation/revocation.
-- Partial audit coverage and no request correlation.
+- Agent own-vs-all is implemented for core resources, but the complete endpoint authorization matrix is not yet proven.
+- Core refund/trip-state races have contention tests; broader lifecycle and load proof remains.
+- JWT key rotation/revocation and centralized secret management remain absent.
+- Audit event coverage remains partial; request correlation is now implemented.
 - PII exposure is not separated into granular projections/permissions.
 - In-memory throttling is not suitable for multiple instances.
 

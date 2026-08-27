@@ -14,6 +14,8 @@
 - Web unit-test baseline for environment, CSRF origin, request-ID, and JWT-expiry helpers.
 - Strict BFF mutation-origin enforcement, upstream timeouts, path validation, content-type preservation, and sanitized unavailable responses.
 - Request-ID propagation through login and authenticated proxy calls, with response correlation.
+- Explicit bounded reverse-proxy trust configuration so forwarded client IPs are not trusted accidentally.
+- Validated date-only report ranges with reversed-range rejection and a 366-day maximum to prevent unbounded report scans.
 - Executable PostgreSQL backup/restore scripts and deployment/restore runbooks.
 
 ### Changed
@@ -25,7 +27,7 @@
 
 ### Validation
 
-- Backend: 15 suites / 40 unit tests and 3 suites / 7 E2E tests passed.
+- Backend: 16 suites / 43 unit tests and 3 suites / 7 E2E tests passed.
 - All refund, tenant-consistency, and settlement SQL contracts passed.
 - Backend lint, typecheck, build, Prisma validation, and production dependency audit passed.
 - Web lint, typecheck, 2 suites / 7 unit tests, production build (16 routes), standalone output check, and production dependency audit passed.

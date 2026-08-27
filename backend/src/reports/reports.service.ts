@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { requireOrgId } from '../common/org';
@@ -20,6 +20,27 @@ const DAY_LABELS = [
   'الجمعة',
   'السبت',
 ];
+
+const MAX_REPORT_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
+
+export function reportRange(
+  query: QueryReportDto,
+  now = new Date(),
+): { gte: Date; lte: Date } {
+  const to = query.to ? new Date(`${query.to}T23:59:59.999Z`) : now;
+  const from = query.from
+    ? new Date(`${query.from}T00:00:00.000Z`)
+    : startOfDay(to);
+
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+    throw new BadRequestException('Invalid report date range');
+  }
+  if (to.getTime() - from.getTime() > MAX_REPORT_RANGE_MS) {
+    throw new BadRequestException('Report date range cannot exceed 366 days');
+  }
+
+  return { gte: from, lte: to };
+}
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: 'نقدي',
@@ -178,7 +199,7 @@ export class ReportsService {
   async sales(user: AuthUser, query: QueryReportDto) {
     const orgId = requireOrgId(user);
     const branch = user.branchId ? { branchId: user.branchId } : {};
-    const { gte, lte } = this.range(query);
+    const { gte, lte } = reportRange(query);
 
     const [aggregate, byMethod] = await Promise.all([
       this.prisma.payment.aggregate({
@@ -204,7 +225,7 @@ export class ReportsService {
   async financial(user: AuthUser, query: QueryReportDto) {
     const orgId = requireOrgId(user);
     const branch = user.branchId ? { branchId: user.branchId } : {};
-    const { gte, lte } = this.range(query);
+    const { gte, lte } = reportRange(query);
     const [payments, expenses, commissions, settlements] = await Promise.all([
       this.prisma.payment.findMany({
         where: { organizationId: orgId, ...branch, createdAt: { gte, lte } },
@@ -284,7 +305,7 @@ export class ReportsService {
   async occupancy(user: AuthUser, query: QueryReportDto) {
     const orgId = requireOrgId(user);
     const branch = user.branchId ? { branchId: user.branchId } : {};
-    const { gte, lte } = this.range(query);
+    const { gte, lte } = reportRange(query);
     const trips = await this.prisma.trip.findMany({
       where: { organizationId: orgId, ...branch, departureAt: { gte, lte } },
       include: {
@@ -340,13 +361,5 @@ export class ReportsService {
         bookings: value.bookings,
       };
     });
-  }
-
-  private range(query: QueryReportDto): { gte: Date; lte: Date } {
-    const from = query.from
-      ? new Date(`${query.from}T00:00:00.000Z`)
-      : startOfDay(new Date());
-    const to = query.to ? new Date(`${query.to}T23:59:59.999Z`) : new Date();
-    return { gte: from, lte: to };
   }
 }

@@ -12,6 +12,7 @@ describe('validateEnvironment', () => {
     expect(validateEnvironment(validEnvironment)).toMatchObject({
       NODE_ENV: 'test',
       PORT: 3001,
+      TRUST_PROXY_HOPS: 0,
       JWT_EXPIRES_IN: '15m',
       JWT_ISSUER: 'ticketty-api',
       JWT_AUDIENCE: 'ticketty-web',
@@ -44,5 +45,8 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, PORT: '70000' }),
     ).toThrow('PORT');
+    expect(() =>
+      validateEnvironment({ ...validEnvironment, TRUST_PROXY_HOPS: '-1' }),
+    ).toThrow('TRUST_PROXY_HOPS');
   });
 });

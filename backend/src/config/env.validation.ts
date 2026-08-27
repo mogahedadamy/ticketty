@@ -13,6 +13,7 @@ export type ValidatedEnvironment = Record<string, unknown> & {
   JWT_ISSUER: string;
   JWT_AUDIENCE: string;
   PORT: number;
+  TRUST_PROXY_HOPS: number;
   WEB_ORIGIN: string;
 };
 
@@ -77,6 +78,12 @@ export function validateEnvironment(
     throw new Error('PORT must be an integer between 1 and 65535');
   }
 
+  const trustProxyValue = requiredString(environment, 'TRUST_PROXY_HOPS', '0');
+  const trustProxyHops = Number(trustProxyValue);
+  if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0) {
+    throw new Error('TRUST_PROXY_HOPS must be a nonnegative integer');
+  }
+
   return {
     ...environment,
     NODE_ENV: nodeEnv as ValidatedEnvironment['NODE_ENV'],
@@ -86,6 +93,7 @@ export function validateEnvironment(
     JWT_ISSUER: requiredString(environment, 'JWT_ISSUER', 'ticketty-api'),
     JWT_AUDIENCE: requiredString(environment, 'JWT_AUDIENCE', 'ticketty-web'),
     PORT: port,
+    TRUST_PROXY_HOPS: trustProxyHops,
     WEB_ORIGIN: httpUrl(
       requiredString(environment, 'WEB_ORIGIN', 'http://localhost:3000'),
       'WEB_ORIGIN',

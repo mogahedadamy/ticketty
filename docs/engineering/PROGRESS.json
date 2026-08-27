@@ -41,7 +41,7 @@
   ],
   "lastValidatedAt": "2026-08-27T11:29:01+02:00",
   "lastValidated": {
-    "backendTests": "15 suites, 40 tests passed; e2e 3 suites, 7 tests passed",
+    "backendTests": "16 suites, 43 tests passed; e2e 3 suites, 7 tests passed",
     "databaseContracts": "refund, tenant consistency, and settlement integrity passed",
     "backendBuild": "passed",
     "prismaValidate": "passed",
