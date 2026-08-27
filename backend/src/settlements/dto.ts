@@ -1,4 +1,5 @@
 import { SettlementStatus } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsDateString,
   IsEnum,
@@ -19,7 +20,7 @@ export class GenerateSettlementDto {
   to: string;
 }
 
-export class QuerySettlementDto {
+export class QuerySettlementDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   agentId?: string;

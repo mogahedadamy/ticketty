@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
+import { QueryTicketDto } from './dto';
 import { TicketsService } from './tickets.service';
 
 @Controller('tickets')
@@ -10,8 +11,8 @@ export class TicketsController {
 
   @Get()
   @Permissions('tickets.read', 'tickets.read.own')
-  findAll(@CurrentUser() user: AuthUser, @Query('tripId') tripId?: string) {
-    return this.ticketsService.findAll(user, tripId);
+  findAll(@CurrentUser() user: AuthUser, @Query() query: QueryTicketDto) {
+    return this.ticketsService.findAll(user, query);
   }
 
   @Get('by-qr/:qr')

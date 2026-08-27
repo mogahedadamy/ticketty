@@ -1,4 +1,5 @@
 import { AdjustmentType, ExpenseCategory, ExpenseStatus } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsDateString,
   IsEnum,
@@ -72,7 +73,7 @@ export class CreateExpenseAdjustmentDto {
   reason: string;
 }
 
-export class QueryExpenseDto {
+export class QueryExpenseDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString()
   date?: string;

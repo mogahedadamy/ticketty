@@ -1,11 +1,11 @@
 # Ticketty Project State
 
-_Last verified: 2026-08-27T11:29:01+02:00_
+_Last verified: 2026-08-27T12:00:02+02:00_
 
 ## Executive status
 
-- Overall evidence-based completion: **67% (functional, not production-ready)**.
-- Production-readiness controls: **76% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
+- Overall evidence-based completion: **68% (functional, not production-ready)**.
+- Production-readiness controls: **77% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
 - Strategy: preserve the working vertical slice and harden it incrementally; do not rewrite from scratch.
 - Repository branch: `master`; repository currently has no commits and all project files are untracked.
 
@@ -72,10 +72,12 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Hardened BFF mutation origin checks, upstream timeouts, proxy response handling, JWT-aligned cookie expiry, and request-ID propagation.
 - Established the first Web test baseline with 2 suites / 7 security and configuration helper tests.
 - Added bounded trusted-proxy configuration and restricted report queries to validated date-only ranges of at most 366 days.
+- Added validated bounded pagination to high-volume lists and replaced agent lifetime relation loading with page-scoped database aggregates.
+- Added automated permission metadata coverage for every business endpoint.
 
 ## Last validated commands
 
-- `backend: pnpm test --runInBand` — passed: 16 suites, 43 tests.
+- `backend: pnpm test --runInBand` — passed: 19 suites, 69 tests, including pagination, guard behavior, and explicit permission metadata coverage for every business route.
 - `backend: pnpm test:e2e --runInBand` — passed: 3 suites, 7 tests, including production-equivalent health/bootstrap, refund contention, booking-cancel versus trip-cancel, and cross-agent isolation.
 - Backend refund, tenant-consistency, and settlement SQL contract scripts — passed.
 - `backend: pnpm lint:check`, `pnpm typecheck`, `pnpm build`, and `pnpm exec prisma validate` — passed.

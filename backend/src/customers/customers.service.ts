@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { requireOrgId, tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCustomerDto, QueryCustomerDto, UpdateCustomerDto } from './dto';
@@ -20,7 +21,7 @@ export class CustomersService {
   }
 
   findAll(user: AuthUser, query: QueryCustomerDto) {
-    const { search, limit } = query;
+    const { search } = query;
     const where: Prisma.CustomerWhereInput = { ...tenantScope(user) };
     if (search) {
       where.OR = [
@@ -33,8 +34,8 @@ export class CustomersService {
     }
     return this.prisma.customer.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

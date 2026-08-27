@@ -9,6 +9,7 @@ import { CommissionType, Prisma, SeatType, TripStatus } from '@prisma/client';
 import { resolveAgentId } from '../common/agent-scope';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import {
   beginIdempotentOperation,
   completeIdempotentOperation,
@@ -359,7 +360,8 @@ export class BookingsService {
         customer: true,
         trip: { include: { route: true, bus: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { resolveAgentId } from '../common/agent-scope';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { requireOrgId, tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateSettlementDto, QuerySettlementDto } from './dto';
@@ -133,7 +134,8 @@ export class SettlementsService {
     return this.prisma.settlement.findMany({
       where,
       include: { agent: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

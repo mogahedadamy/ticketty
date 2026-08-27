@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { resolveAgentId } from '../common/agent-scope';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { requireOrgId, tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAgentDto, QueryAgentDto, UpdateAgentDto } from './dto';
+import {
+  CreateAgentDto,
+  QueryAgentDto,
+  QueryCommissionDto,
+  UpdateAgentDto,
+} from './dto';
 
 @Injectable()
 export class AgentsService {
@@ -30,6 +36,7 @@ export class AgentsService {
 
   async findAll(user: AuthUser, query: QueryAgentDto) {
     const { search } = query;
+    const pagination = paginationArgs(query);
     const agentId = await resolveAgentId(this.prisma, user);
     const where: Prisma.AgentWhereInput = {
       ...tenantScope(user),
@@ -41,42 +48,57 @@ export class AgentsService {
         { phone: { contains: search, mode: Prisma.QueryMode.insensitive } },
       ];
     }
-    return this.prisma.agent
-      .findMany({
-        where,
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          commissions: { select: { amount: true, reversedAt: true } },
-          settlements: {
-            where: { status: 'SETTLED' },
-            select: { commissionAmount: true },
-          },
-          _count: { select: { bookings: true, commissions: true } },
+    const agents = await this.prisma.agent.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { bookings: true, commissions: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...pagination,
+    });
+    const agentIds = agents.map((agent) => agent.id);
+    if (agentIds.length === 0) return [];
+
+    const [earnedByAgent, settledByAgent] = await Promise.all([
+      this.prisma.commission.groupBy({
+        by: ['agentId'],
+        where: {
+          organizationId: requireOrgId(user),
+          agentId: { in: agentIds },
+          reversedAt: null,
         },
-        orderBy: { createdAt: 'desc' },
-      })
-      .then((agents) =>
-        agents.map(({ commissions, settlements, ...agent }) => {
-          const earned = commissions
-            .filter((commission) => !commission.reversedAt)
-            .reduce(
-              (sum, commission) => sum.plus(commission.amount),
-              new Prisma.Decimal(0),
-            );
-          const settled = settlements.reduce(
-            (sum, settlement) => sum.plus(settlement.commissionAmount),
-            new Prisma.Decimal(0),
-          );
-          return {
-            ...agent,
-            financials: {
-              earnedCommission: earned,
-              settledCommission: settled,
-              balance: earned.minus(settled),
-            },
-          };
-        }),
-      );
+        _sum: { amount: true },
+      }),
+      this.prisma.settlement.groupBy({
+        by: ['agentId'],
+        where: {
+          organizationId: requireOrgId(user),
+          agentId: { in: agentIds },
+          status: 'SETTLED',
+        },
+        _sum: { commissionAmount: true },
+      }),
+    ]);
+    const earned = new Map(
+      earnedByAgent.map((row) => [row.agentId, row._sum.amount]),
+    );
+    const settled = new Map(
+      settledByAgent.map((row) => [row.agentId, row._sum.commissionAmount]),
+    );
+
+    return agents.map((agent) => {
+      const earnedCommission = earned.get(agent.id) ?? new Prisma.Decimal(0);
+      const settledCommission = settled.get(agent.id) ?? new Prisma.Decimal(0);
+      return {
+        ...agent,
+        financials: {
+          earnedCommission,
+          settledCommission,
+          balance: earnedCommission.minus(settledCommission),
+        },
+      };
+    });
   }
 
   async findMe(orgId: string, userId: string) {
@@ -102,7 +124,11 @@ export class AgentsService {
     return agent;
   }
 
-  async commissions(user: AuthUser, id: string) {
+  async commissions(
+    user: AuthUser,
+    id: string,
+    query: QueryCommissionDto = {},
+  ) {
     const agentId = await resolveAgentId(this.prisma, user);
     if (agentId && agentId !== id)
       throw new NotFoundException('الوكيل غير موجود');
@@ -113,7 +139,8 @@ export class AgentsService {
         ticket: true,
         booking: { include: { trip: { include: { route: true } } } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

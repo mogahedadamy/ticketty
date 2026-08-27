@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { resolveAgentId } from '../common/agent-scope';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,7 +33,8 @@ export class PaymentsService {
           include: { trip: { include: { route: true } }, tickets: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

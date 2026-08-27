@@ -1,5 +1,6 @@
 import { BookingStatus, PaymentMethod } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -121,7 +122,13 @@ export class CancelBookingDto {
   reason: string;
 }
 
-export class QueryBookingDto {
+export class QueryTicketDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  tripId?: string;
+}
+
+export class QueryBookingDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   tripId?: string;

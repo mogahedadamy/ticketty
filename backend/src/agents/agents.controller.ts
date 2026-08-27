@@ -13,7 +13,12 @@ import type { AuthUser } from '../common/decorators/current-user.decorator';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { requireOrgId } from '../common/org';
 import { AgentsService } from './agents.service';
-import { CreateAgentDto, QueryAgentDto, UpdateAgentDto } from './dto';
+import {
+  CreateAgentDto,
+  QueryAgentDto,
+  QueryCommissionDto,
+  UpdateAgentDto,
+} from './dto';
 
 @Controller('agents')
 export class AgentsController {
@@ -45,8 +50,12 @@ export class AgentsController {
 
   @Get(':id/commissions')
   @Permissions('agents.read', 'agents.read.own')
-  commissions(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.agentsService.commissions(user, id);
+  commissions(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query() query: QueryCommissionDto,
+  ) {
+    return this.agentsService.commissions(user, id, query);
   }
 
   @Patch(':id')

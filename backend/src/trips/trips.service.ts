@@ -7,6 +7,7 @@ import {
 import { Prisma, SeatStatus, SeatType, TripStatus } from '@prisma/client';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import {
   beginIdempotentOperation,
   completeIdempotentOperation,
@@ -118,7 +119,8 @@ export class TripsService {
         driver: true,
         _count: { select: { tripSeats: true, tickets: true } },
       },
-      orderBy: { departureAt: 'asc' },
+      orderBy: [{ departureAt: 'asc' }, { id: 'asc' }],
+      ...paginationArgs(query),
     });
   }
 

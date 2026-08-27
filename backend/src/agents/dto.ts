@@ -1,4 +1,5 @@
 import { AgentType, CommissionType } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsBoolean,
   IsEnum,
@@ -77,7 +78,9 @@ export class UpdateAgentDto {
   userId?: string;
 }
 
-export class QueryAgentDto {
+export class QueryCommissionDto extends PaginationQueryDto {}
+
+export class QueryAgentDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)

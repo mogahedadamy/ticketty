@@ -218,7 +218,7 @@ describe('external agent ownership isolation (PostgreSQL)', () => {
       await Promise.all([
         agentsService.findAll(userOne, {}),
         bookingsService.findAll(userOne, {}),
-        ticketsService.findAll(userOne),
+        ticketsService.findAll(userOne, {}),
         paymentsService.findAll(userOne, {}),
         settlementsService.findAll(userOne, {}),
       ]);

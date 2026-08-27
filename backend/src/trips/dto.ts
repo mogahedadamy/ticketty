@@ -1,4 +1,5 @@
 import { TripStatus } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import {
   IsDateString,
   IsEnum,
@@ -89,7 +90,7 @@ export class CancelTripDto {
   reason: string;
 }
 
-export class QueryTripDto {
+export class QueryTripDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString()
   date?: string;

@@ -7,8 +7,10 @@ import { Prisma } from '@prisma/client';
 import { resolveAgentId } from '../common/agent-scope';
 import { AuditService } from '../common/audit/audit.service';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { paginationArgs } from '../common/dto/pagination-query.dto';
 import { tenantScope } from '../common/org';
 import { PrismaService } from '../prisma/prisma.service';
+import { QueryTicketDto } from './dto';
 
 @Injectable()
 export class TicketsService {
@@ -17,7 +19,7 @@ export class TicketsService {
     private readonly audit: AuditService,
   ) {}
 
-  async findAll(user: AuthUser, tripId?: string) {
+  async findAll(user: AuthUser, query: QueryTicketDto = {}) {
     const scope = tenantScope(user);
     const agentId = await resolveAgentId(this.prisma, user);
     const where: Prisma.TicketWhereInput = {
@@ -25,14 +27,15 @@ export class TicketsService {
       ...(scope.branchId ? { trip: { branchId: scope.branchId } } : {}),
       ...(agentId ? { booking: { agentId } } : {}),
     };
-    if (tripId) where.tripId = tripId;
+    if (query.tripId) where.tripId = query.tripId;
     return this.prisma.ticket.findMany({
       where,
       include: {
         booking: { include: { payments: true } },
         trip: { include: { route: true, bus: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...paginationArgs(query),
     });
   }
 

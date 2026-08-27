@@ -30,7 +30,7 @@ describe('TicketsService tenant isolation', () => {
 
   it('fails closed when a user has no organization', async () => {
     await expect(
-      service.findAll(authenticatedUser({ orgId: null })),
+      service.findAll(authenticatedUser({ orgId: null }), {}),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(findMany).not.toHaveBeenCalled();
   });
@@ -40,7 +40,7 @@ describe('TicketsService tenant isolation', () => {
 
     await service.findAll(
       authenticatedUser({ orgId: 'org-1', branchId: 'branch-1' }),
-      'trip-1',
+      { tripId: 'trip-1' },
     );
 
     expect(findMany).toHaveBeenCalledWith(

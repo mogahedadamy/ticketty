@@ -1,13 +1,5 @@
-import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateCustomerDto {
   @IsString()
@@ -65,16 +57,9 @@ export class UpdateCustomerDto {
   notes?: string;
 }
 
-export class QueryCustomerDto {
+export class QueryCustomerDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
   search?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(200)
-  limit?: number;
 }
