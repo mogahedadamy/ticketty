@@ -1,11 +1,11 @@
 # Ticketty Project State
 
-_Last verified: 2026-08-27T12:00:02+02:00_
+_Last verified: 2026-08-27T12:13:04+02:00_
 
 ## Executive status
 
-- Overall evidence-based completion: **68% (functional, not production-ready)**.
-- Production-readiness controls: **77% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
+- Overall evidence-based completion: **69% (functional, not production-ready)**.
+- Production-readiness controls: **79% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
 - Strategy: preserve the working vertical slice and harden it incrementally; do not rewrite from scratch.
 - Repository branch: `master`; repository currently has no commits and all project files are untracked.
 
@@ -73,12 +73,13 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Established the first Web test baseline with 2 suites / 7 security and configuration helper tests.
 - Added bounded trusted-proxy configuration and restricted report queries to validated date-only ranges of at most 366 days.
 - Added validated bounded pagination to high-volume lists and replaced agent lifetime relation loading with page-scoped database aggregates.
-- Added automated permission metadata coverage for every business endpoint.
+- Added automated permission metadata coverage for every business endpoint and enforced role-assignment grant ceilings.
+- Added a stable sanitized API error envelope with request IDs and safe Prisma mappings.
 
 ## Last validated commands
 
-- `backend: pnpm test --runInBand` — passed: 19 suites, 69 tests, including pagination, guard behavior, and explicit permission metadata coverage for every business route.
-- `backend: pnpm test:e2e --runInBand` — passed: 3 suites, 7 tests, including production-equivalent health/bootstrap, refund contention, booking-cancel versus trip-cancel, and cross-agent isolation.
+- `backend: pnpm test --runInBand` — passed: 21 suites, 81 tests, including pagination, grant ceilings, error mapping, guard behavior, and explicit permission metadata coverage for every business route.
+- `backend: pnpm test:e2e --runInBand` — passed: 3 suites, 9 tests, including production-equivalent health/bootstrap, stable error envelopes, refund contention, booking-cancel versus trip-cancel, and cross-agent isolation.
 - Backend refund, tenant-consistency, and settlement SQL contract scripts — passed.
 - `backend: pnpm lint:check`, `pnpm typecheck`, `pnpm build`, and `pnpm exec prisma validate` — passed.
 - `backend: pnpm exec prisma migrate status` — 17 migrations; local database is up to date.

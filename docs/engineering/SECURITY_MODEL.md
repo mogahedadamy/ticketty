@@ -28,7 +28,7 @@ Organization and branch IDs from the client are identifiers to validate, never a
 - Core refund/trip-state races have contention tests; broader lifecycle and load proof remains.
 - JWT key rotation/revocation and centralized secret management remain absent.
 - Audit event coverage remains partial; request correlation is now implemented.
-- PII exposure is not separated into granular projections/permissions.
+- Role creation and assignment now enforce a grant ceiling so delegated administrators cannot grant permissions they do not possess; PII exposure still needs more granular projections/permissions.
 - In-memory throttling is not suitable for multiple instances.
 
 ## Closed this cycle

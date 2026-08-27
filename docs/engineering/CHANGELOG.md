@@ -19,6 +19,8 @@
 - Added backward-compatible `page`/`limit` bounds (50 default, 200 maximum) and stable ordering to high-volume operational lists.
 - Replaced per-agent lifetime commission/settlement materialization with page-scoped database aggregation.
 - Added permission-guard behavior tests and a metadata gate proving every business route declares explicit permissions.
+- Added a global sanitized API error envelope with stable codes, request correlation, and safe Prisma conflict/reference/not-found mappings.
+- Added a permission grant ceiling for custom role creation and role assignment, preventing delegated administrators from escalating beyond their own permissions.
 - Executable PostgreSQL backup/restore scripts and deployment/restore runbooks.
 
 ### Changed
@@ -30,7 +32,7 @@
 
 ### Validation
 
-- Backend: 19 suites / 69 unit tests and 3 suites / 7 E2E tests passed.
+- Backend: 21 suites / 81 unit tests and 3 suites / 9 E2E tests passed.
 - All refund, tenant-consistency, and settlement SQL contracts passed.
 - Backend lint, typecheck, build, Prisma validation, and production dependency audit passed.
 - Web lint, typecheck, 2 suites / 7 unit tests, production build (16 routes), standalone output check, and production dependency audit passed.

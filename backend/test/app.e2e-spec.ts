@@ -42,6 +42,34 @@ describe('AppController (e2e)', () => {
       .expect({ status: 'ready', database: 'up' });
   });
 
+  it('returns a stable validation error envelope', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ unexpected: true })
+      .expect(400);
+
+    const body = response.body as { message?: unknown };
+    expect(body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+    expect(body.message).toEqual(expect.any(Array));
+  });
+
+  it('returns a stable sanitized error envelope', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/does-not-exist')
+      .expect(404);
+
+    const body = response.body as { requestId?: unknown };
+    expect(response.headers['x-request-id']).toBe(body.requestId);
+    expect(body).toMatchObject({
+      statusCode: 404,
+      code: 'NOT_FOUND',
+    });
+    expect(body).not.toHaveProperty('stack');
+  });
+
   afterEach(async () => {
     await app.close();
   });

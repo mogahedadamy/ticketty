@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
+import { ApiExceptionFilter } from '../common/http/api-exception.filter';
 
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
@@ -17,6 +18,7 @@ export function configureApp(app: INestApplication): void {
     origin: config.getOrThrow<string>('WEB_ORIGIN'),
     credentials: true,
   });
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

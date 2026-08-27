@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,6 +17,26 @@ import {
   UpdateOrganizationDto,
   UpdateUserDto,
 } from './dto';
+
+export function canGrantPermissions(
+  actorPermissions: string[],
+  requestedPermissions: string[],
+): boolean {
+  if (actorPermissions.includes('*')) return true;
+  return requestedPermissions.every((permission) => {
+    if (permission === '*') return false;
+    const [domain] = permission.split('.');
+    const broaderPermission = permission.endsWith('.own')
+      ? permission.slice(0, -4)
+      : undefined;
+    return (
+      actorPermissions.includes(permission) ||
+      actorPermissions.includes(`${domain}.*`) ||
+      (broaderPermission !== undefined &&
+        actorPermissions.includes(broaderPermission))
+    );
+  });
+}
 
 @Injectable()
 export class AdministrationService {
@@ -76,6 +97,7 @@ export class AdministrationService {
     });
   }
   async createRole(user: AuthUser, dto: CreateRoleDto) {
+    this.ensureGrantablePermissions(user, dto.permissions);
     const role = await this.prisma.$transaction((tx) =>
       tx.role.create({
         data: {
@@ -109,7 +131,7 @@ export class AdministrationService {
   }
   async createUser(user: AuthUser, dto: CreateUserDto) {
     const organizationId = requireOrgId(user);
-    await this.validateRefs(organizationId, dto.roleId, dto.branchId);
+    await this.validateRefs(user, dto.roleId, dto.branchId);
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email.trim().toLowerCase() },
     });
@@ -149,7 +171,7 @@ export class AdministrationService {
     if (!existing) throw new NotFoundException('المستخدم غير موجود');
     if (id === user.sub && dto.active === false)
       throw new ConflictException('لا يمكنك تعطيل حسابك الحالي');
-    await this.validateRefs(organizationId, dto.roleId, dto.branchId);
+    await this.validateRefs(user, dto.roleId, dto.branchId);
     const updated = await this.prisma.$transaction((tx) =>
       tx.user.update({
         where: { id },
@@ -175,24 +197,38 @@ export class AdministrationService {
     return updated;
   }
   private async validateRefs(
-    orgId: string,
+    user: AuthUser,
     roleId?: string,
     branchId?: string,
   ) {
+    const orgId = requireOrgId(user);
     if (roleId) {
       const role = await this.prisma.role.findFirst({
         where: {
           id: roleId,
           OR: [{ organizationId: orgId }, { organizationId: null }],
         },
+        select: { permissions: true },
       });
       if (!role) throw new NotFoundException('الدور غير موجود');
+      this.ensureGrantablePermissions(user, role.permissions);
     }
     if (branchId) {
       const branch = await this.prisma.branch.findFirst({
         where: { id: branchId, organizationId: orgId },
       });
       if (!branch) throw new NotFoundException('الفرع غير موجود');
+    }
+  }
+
+  private ensureGrantablePermissions(
+    user: AuthUser,
+    requestedPermissions: string[],
+  ): void {
+    if (!canGrantPermissions(user.permissions, requestedPermissions)) {
+      throw new ForbiddenException(
+        'لا يمكنك منح صلاحيات أعلى من صلاحيات حسابك',
+      );
     }
   }
 }
