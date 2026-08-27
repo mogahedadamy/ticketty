@@ -98,6 +98,7 @@ jobs:
         working-directory: web
     env:
       API_BASE_URL: http://127.0.0.1:3001/api
+      APP_ORIGIN: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -109,8 +110,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm exec tsc --noEmit
+      - run: pnpm lint:check
+      - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
       - run: pnpm audit --prod
 

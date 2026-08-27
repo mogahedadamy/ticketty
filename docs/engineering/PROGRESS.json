@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "measuredAt": "2026-08-27T11:18:52+02:00",
-  "overall": 66,
-  "productionReadiness": 74,
+  "measuredAt": "2026-08-27T11:29:01+02:00",
+  "overall": 67,
+  "productionReadiness": 76,
   "weights": {
     "architecture": 8,
     "database": 10,
@@ -22,8 +22,8 @@
     "backend": 75,
     "erpBusinessLogic": 52,
     "accounting": 30,
-    "frontend": 58,
-    "testing": 52,
+    "frontend": 62,
+    "testing": 55,
     "devopsObservability": 55,
     "documentation": 58
   },
@@ -39,12 +39,13 @@
     "Repository still has no reviewed version-control baseline",
     "Production container execution has not yet been verified"
   ],
-  "lastValidatedAt": "2026-08-27T11:18:52+02:00",
+  "lastValidatedAt": "2026-08-27T11:29:01+02:00",
   "lastValidated": {
     "backendTests": "15 suites, 40 tests passed; e2e 3 suites, 7 tests passed",
     "databaseContracts": "refund, tenant consistency, and settlement integrity passed",
     "backendBuild": "passed",
     "prismaValidate": "passed",
+    "webTests": "2 suites, 7 security and configuration helper tests passed",
     "webBuild": "passed with 16 routes and standalone output",
     "webLint": "passed",
     "webTypecheck": "passed",

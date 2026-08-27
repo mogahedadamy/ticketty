@@ -1,3 +1,9 @@
+import { getServerEnvironment } from "@/lib/server/env";
+import {
+  hasTrustedOrigin,
+  jwtRemainingSeconds,
+  requestIdFrom,
+} from "@/lib/server/request-security";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -16,35 +22,37 @@ interface LoginResponse {
   };
 }
 
-function apiBaseUrl(): string {
-  return (process.env.API_BASE_URL ?? "http://127.0.0.1:3001/api").replace(
-    /\/$/,
-    "",
-  );
+function jsonResponse(body: unknown, status: number, requestId: string) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "X-Request-Id": requestId },
+  });
 }
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  const expectedOrigin = new URL(request.url).origin;
-  if (origin && origin !== expectedOrigin) {
-    return NextResponse.json({ message: "طلب غير موثوق" }, { status: 403 });
+  const requestId = requestIdFrom(request.headers);
+  const environment = getServerEnvironment();
+  if (!hasTrustedOrigin(request, environment.appOrigin)) {
+    return jsonResponse({ message: "طلب غير موثوق" }, 403, requestId);
   }
+
   let credentials: unknown;
   try {
     credentials = await request.json();
   } catch {
-    return NextResponse.json(
-      { message: "بيانات الطلب غير صالحة" },
-      { status: 400 },
-    );
+    return jsonResponse({ message: "بيانات الطلب غير صالحة" }, 400, requestId);
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl()}/auth/login`, {
+    const response = await fetch(`${environment.apiBaseUrl}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Request-Id": requestId,
+      },
       body: JSON.stringify(credentials),
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
     const data: unknown = await response.json();
 
@@ -56,38 +64,44 @@ export async function POST(request: Request) {
         typeof data.message === "string"
           ? data.message
           : "تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.";
-      return NextResponse.json({ message }, { status: response.status });
+      return jsonResponse({ message }, response.status, requestId);
     }
 
     const login = data as LoginResponse;
-    if (!login.access_token || !login.user) {
+    const maxAge = login.access_token
+      ? jwtRemainingSeconds(login.access_token)
+      : null;
+    if (!login.user || !maxAge) {
       throw new Error("Malformed authentication response");
     }
 
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE, login.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: environment.isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge,
+      priority: "high",
     });
 
-    return NextResponse.json({ user: login.user });
+    return jsonResponse({ user: login.user }, 200, requestId);
   } catch {
-    return NextResponse.json(
+    return jsonResponse(
       { message: "خدمة الدخول غير متاحة حالياً. حاول مرة أخرى بعد قليل." },
-      { status: 503 },
+      503,
+      requestId,
     );
   }
 }
 
 export async function DELETE(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
-    return NextResponse.json({ message: "طلب غير موثوق" }, { status: 403 });
+  const requestId = requestIdFrom(request.headers);
+  const { appOrigin } = getServerEnvironment();
+  if (!hasTrustedOrigin(request, appOrigin)) {
+    return jsonResponse({ message: "طلب غير موثوق" }, 403, requestId);
   }
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
-  return NextResponse.json({ success: true });
+  return jsonResponse({ success: true }, 200, requestId);
 }

@@ -5,7 +5,7 @@
 - Backend: 15 Jest suites / 40 tests after the current hardening cycle.
 - Backend E2E: 3 suites / 7 tests covering production-equivalent app bootstrap, health, refund contention, booking-vs-trip cancellation, and cross-agent isolation.
 - PostgreSQL contract scripts cover refund, tenant, and settlement integrity and pass against the migrated local database.
-- Frontend: lint, strict TypeScript, and production build pass; application/component/browser tests remain absent.
+- Frontend: 2 Vitest suites / 7 tests cover server environment, origin, request-ID, and JWT-expiry helpers; lint, strict TypeScript, and production build pass. Component/browser tests remain absent.
 - Active Prisma schema validation and all 17 runtime migrations pass; candidate database v1 remains a separate, inactive contract.
 - GitHub CI now enforces backend/web quality, database integration contracts, dependency audits, and container builds.
 

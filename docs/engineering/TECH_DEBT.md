@@ -8,7 +8,7 @@
 | TD-004 | Low | Agent authorization | Explicit `.own` permissions, fail-closed ownership scoping, and cross-agent PostgreSQL tests protect core resources | Complete the endpoint-by-permission matrix and add controller-level 403 tests. |
 | TD-005 | Medium | Settlements | Immutable unique commission allocation and finalized-line protection now exist; broader reconciliation and accounting posting remain | Add settlement-to-ledger posting and reconciliation integration tests. |
 | TD-006 | High | Accounting | No active double-entry ledger/fiscal periods | Resolve finance policies and migrate candidate accounting contract safely. |
-| TD-007 | High | Tests | Core PostgreSQL concurrency/security suites exist, but backend coverage remains low and Web has no application tests | Add API authorization matrices, frontend component/Playwright suites, and coverage thresholds before release. |
+| TD-007 | High | Tests | Core PostgreSQL suites and a Web security-helper baseline exist, but backend coverage remains low and component/browser tests are absent | Add API authorization matrices, frontend component/Playwright suites, and coverage thresholds before release. |
 | TD-008 | Resolved | Dependency | `deepmerge-ts` is pinned to patched 8.x through pnpm overrides; production audit is clean | Keep the override covered by CI until a compatible Prisma upgrade removes the transitive requirement. |
 | TD-009 | Medium | Holds | Expired holds depend on seat-list cleanup | Atomic takeover and scheduled cleanup. Non-sellable seat types are now rejected server-side. |
 | TD-010 | Medium | Reports | Gross revenue KPIs can include refunded amounts | Define financial metrics and aggregate net values consistently in SQL. |

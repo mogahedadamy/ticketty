@@ -10,6 +10,10 @@
 - Sanitized request-correlation IDs and structured HTTP completion logs without credentials or bodies.
 - Multi-stage backend/web Dockerfiles, standalone Next.js output, and a Compose stack with PostgreSQL health, one-shot migrations, service health checks, and non-root application users.
 - Web liveness and backend-dependent readiness routes.
+- Centralized validated server-only web environment configuration and startup validation.
+- Web unit-test baseline for environment, CSRF origin, request-ID, and JWT-expiry helpers.
+- Strict BFF mutation-origin enforcement, upstream timeouts, path validation, content-type preservation, and sanitized unavailable responses.
+- Request-ID propagation through login and authenticated proxy calls, with response correlation.
 - Executable PostgreSQL backup/restore scripts and deployment/restore runbooks.
 
 ### Changed
@@ -24,7 +28,7 @@
 - Backend: 15 suites / 40 unit tests and 3 suites / 7 E2E tests passed.
 - All refund, tenant-consistency, and settlement SQL contracts passed.
 - Backend lint, typecheck, build, Prisma validation, and production dependency audit passed.
-- Web lint, typecheck, production build (16 routes), standalone output check, and production dependency audit passed.
+- Web lint, typecheck, 2 suites / 7 unit tests, production build (16 routes), standalone output check, and production dependency audit passed.
 - Compose configuration rendered successfully.
 - Container image execution remains unverified locally because no Docker daemon is available; CI now builds both images.
 

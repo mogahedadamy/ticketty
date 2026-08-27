@@ -1,11 +1,11 @@
 # Ticketty Project State
 
-_Last verified: 2026-08-27T11:18:52+02:00_
+_Last verified: 2026-08-27T11:29:01+02:00_
 
 ## Executive status
 
-- Overall evidence-based completion: **66% (functional, not production-ready)**.
-- Production-readiness controls: **74% — still NO-GO for real passenger or financial data until finance, RLS, test, and operational release gates close**.
+- Overall evidence-based completion: **67% (functional, not production-ready)**.
+- Production-readiness controls: **76% — still NO-GO for real passenger or financial data until finance, RLS, browser-test, and operational release gates close**.
 - Strategy: preserve the working vertical slice and harden it incrementally; do not rewrite from scratch.
 - Repository branch: `master`; repository currently has no commits and all project files are untracked.
 
@@ -68,6 +68,9 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - Added reproducible backend/web container definitions, a one-shot migration Compose stack, web health routes, and graceful shutdown.
 - Added executable PostgreSQL backup/restore tooling and operator runbooks.
 - Resolved the known High `deepmerge-ts` advisory with a tested pnpm override.
+- Centralized validated web server configuration and removed inconsistent API defaults.
+- Hardened BFF mutation origin checks, upstream timeouts, proxy response handling, JWT-aligned cookie expiry, and request-ID propagation.
+- Established the first Web test baseline with 2 suites / 7 security and configuration helper tests.
 
 ## Last validated commands
 
@@ -77,7 +80,7 @@ Accounting ledger, fiscal periods, journal posting, outbox/workers, robust offli
 - `backend: pnpm lint:check`, `pnpm typecheck`, `pnpm build`, and `pnpm exec prisma validate` — passed.
 - `backend: pnpm exec prisma migrate status` — 17 migrations; local database is up to date.
 - `backend: pnpm audit --prod` — no known vulnerabilities after the patched transitive override.
-- `web: pnpm lint:check`, `pnpm typecheck`, and `pnpm build` — passed; standalone server output exists and 16 routes were generated.
+- `web: pnpm lint:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build` — passed; 2 suites / 7 tests, standalone server output, and 16 generated routes.
 - `web: pnpm audit --prod` — no known vulnerabilities.
 - `docker compose config` — passed. Image builds were not executable locally because the Docker daemon is unavailable; CI includes both image builds.
 

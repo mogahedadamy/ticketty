@@ -1,58 +1,87 @@
+import { getServerEnvironment } from "@/lib/server/env";
+import {
+  hasTrustedOrigin,
+  requestIdFrom,
+} from "@/lib/server/request-security";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
-const API_BASE = (process.env.API_BASE_URL ?? "http://127.0.0.1:3001/api").replace(
-  /\/$/,
-  "",
-);
-
 const SESSION_COOKIE = "ticketty_session";
+const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
+const SAFE_PATH_SEGMENT = /^[A-Za-z0-9._~-]+$/;
 
-/**
- * Generic authenticated proxy from the browser to the backend API.
- *
- * The browser holds the JWT in an HttpOnly cookie, so it cannot send an
- * Authorization header directly. This route handler reads the cookie
- * server-side and forwards the request to the backend with a Bearer token.
- *
- * Example: GET /api/proxy/auth/me  →  GET {API_BASE}/auth/me
- */
 async function proxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ) {
+  const requestId = requestIdFrom(request.headers);
+  const environment = getServerEnvironment();
   const { path } = await context.params;
   const method = request.method;
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    const origin = request.headers.get("origin");
-    if (origin && origin !== request.nextUrl.origin) {
-      return NextResponse.json({ message: "طلب غير موثوق" }, { status: 403 });
-    }
+
+  if (
+    path.length === 0 ||
+    path.some(
+      (segment) =>
+        !SAFE_PATH_SEGMENT.test(segment) || segment === "." || segment === "..",
+    )
+  ) {
+    return NextResponse.json(
+      { message: "مسار الطلب غير صالح" },
+      { status: 400, headers: { "X-Request-Id": requestId } },
+    );
   }
+
+  if (
+    !["GET", "HEAD", "OPTIONS"].includes(method) &&
+    !hasTrustedOrigin(request, environment.appOrigin)
+  ) {
+    return NextResponse.json(
+      { message: "طلب غير موثوق" },
+      { status: 403, headers: { "X-Request-Id": requestId } },
+    );
+  }
+
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const target = `${environment.apiBaseUrl}/${path.join("/")}${request.nextUrl.search}`;
+  const isBodyless = BODYLESS_METHODS.has(method);
+  const rawBody = isBodyless ? undefined : await request.arrayBuffer();
+  const headers = new Headers({ "X-Request-Id": requestId });
 
-  const query = request.nextUrl.search;
-  const target = `${API_BASE}/${path.join("/")}${query}`;
-
-  const isBodyless = method === "GET" || method === "HEAD";
-  const rawBody = isBodyless ? undefined : await request.text();
-
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  if (rawBody) headers["Content-Type"] = "application/json";
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const contentType = request.headers.get("content-type");
+  if (contentType && rawBody?.byteLength) headers.set("Content-Type", contentType);
   const idempotencyKey = request.headers.get("idempotency-key");
-  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
 
-  const backendRes = await fetch(target, {
-    method,
-    headers,
-    body: rawBody,
-    cache: "no-store",
-  });
+  try {
+    const backendResponse = await fetch(target, {
+      method,
+      headers,
+      body: rawBody?.byteLength ? rawBody : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    const responseHeaders = new Headers({ "X-Request-Id": requestId });
+    const backendContentType = backendResponse.headers.get("content-type");
+    if (backendContentType) {
+      responseHeaders.set("Content-Type", backendContentType);
+    }
 
-  const data = await backendRes.json().catch(() => null);
-
-  return NextResponse.json(data, { status: backendRes.status });
+    const body =
+      method === "HEAD" || backendResponse.status === 204
+        ? null
+        : await backendResponse.arrayBuffer();
+    return new NextResponse(body, {
+      status: backendResponse.status,
+      headers: responseHeaders,
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "الخدمة الخلفية غير متاحة حالياً" },
+      { status: 503, headers: { "X-Request-Id": requestId } },
+    );
+  }
 }
 
 export { proxy as GET, proxy as POST, proxy as PUT, proxy as PATCH, proxy as DELETE };
