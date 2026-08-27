@@ -1,0 +1,764 @@
+// Ticketty ERP — Prisma Schema (Multi-tenant)
+// شركة الباصات = Organization (Tenant). كل الكيانات التجارية مرتبطة بـ organizationId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// التنظيم والفروع
+// ─────────────────────────────────────────────────────────────
+
+model Organization {
+  id                     String   @id @default(cuid())
+  name                   String
+  slug                   String   @unique
+  currency               String   @default("SDG")
+  phone                  String?
+  address                String?
+  ticketTerms            String?
+  cancellationFeePercent Decimal  @default(0) @db.Decimal(5, 2)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  branches           Branch[]
+  users              User[]
+  roles              Role[]
+  customers          Customer[]
+  routes             Route[]
+  buses              Bus[]
+  seatTemplates      SeatTemplate[]
+  trips              Trip[]
+  bookings           Booking[]
+  tickets            Ticket[]
+  payments           Payment[]
+  manifests          Manifest[]
+  agents             Agent[]
+  commissions        Commission[]
+  expenses           Expense[]
+  settlements        Settlement[]
+  drivers            Driver[]
+  refunds            Refund[]
+  expenseAdjustments ExpenseAdjustment[]
+  idempotencyRecords IdempotencyRecord[]
+  settlementLines    SettlementLine[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  city           String
+  phone          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+  routes       Route[]
+  buses        Bus[]
+  drivers      Driver[]
+  trips        Trip[]
+  bookings     Booking[]
+  payments     Payment[]
+  agents       Agent[]
+  expenses     Expense[]
+  auditLogs    AuditLog[]
+  customers    Customer[]
+
+  @@index([organizationId])
+  @@map("branches")
+}
+
+// ─────────────────────────────────────────────────────────────
+// المستخدمون والأدوار (RBAC)
+// ─────────────────────────────────────────────────────────────
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String?
+  key            String // OWNER, OPS_MANAGER, FINANCE, STATION_MANAGER, SELLER, AGENT
+  nameAr         String
+  nameEn         String
+  permissions    String[] // قائمة صلاحيات دقيقة
+  isSystem       Boolean  @default(false)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@unique([organizationId, key])
+  @@map("roles")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String?
+  roleId         String
+  branchId       String?
+  name           String
+  email          String   @unique
+  phone          String?
+  passwordHash   String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role          @relation(fields: [roleId], references: [id])
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  agent        Agent?
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// العملاء
+// ─────────────────────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(cuid())
+  organizationId String
+  branchId       String?
+  name           String
+  phone          String
+  nationalId     String?
+  gender         String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  bookings     Booking[]
+
+  @@index([organizationId, phone])
+  @@index([branchId])
+  @@map("customers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// المسارات
+// ─────────────────────────────────────────────────────────────
+
+model Route {
+  id              String   @id @default(cuid())
+  organizationId  String
+  branchId        String?
+  name            String // "الخرطوم - بورتسودان"
+  fromCity        String
+  toCity          String
+  distanceKm      Int?
+  durationMinutes Int?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  stops        RouteStop[]
+  trips        Trip[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@map("routes")
+}
+
+model RouteStop {
+  id      String @id @default(cuid())
+  routeId String
+  city    String
+  order   Int
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([routeId])
+  @@map("route_stops")
+}
+
+// ─────────────────────────────────────────────────────────────
+// الأسطول وقوالب المقاعد
+// ─────────────────────────────────────────────────────────────
+
+model Bus {
+  id             String    @id @default(cuid())
+  organizationId String
+  branchId       String?
+  plateNumber    String
+  model          String?
+  year           Int?
+  seatTemplateId String
+  status         BusStatus @default(READY)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  seatTemplate SeatTemplate @relation(fields: [seatTemplateId], references: [id])
+  trips        Trip[]
+  expenses     Expense[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@map("buses")
+}
+
+enum BusStatus {
+  READY
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+model Driver {
+  id             String       @id @default(cuid())
+  organizationId String
+  branchId       String?
+  name           String
+  phone          String
+  licenseNumber  String
+  licenseExpiry  DateTime
+  status         DriverStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  trips        Trip[]
+
+  @@unique([organizationId, licenseNumber])
+  @@index([organizationId, status])
+  @@index([branchId])
+  @@map("drivers")
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model SeatTemplate {
+  id               String   @id @default(cuid())
+  organizationId   String
+  name             String // "حافلة VIP 2+1"
+  rows             Int
+  columnsPerRow    Int
+  aisleAfterColumn Int // رقم العمود الذي يقع الممر بعده (مثلاً 2 لترتيب 2+2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  seats        Seat[]
+  buses        Bus[]
+
+  @@index([organizationId])
+  @@map("seat_templates")
+}
+
+model Seat {
+  id             String   @id @default(cuid())
+  seatTemplateId String
+  row            Int
+  column         Int
+  label          String // "A1", "B1", ...
+  seatType       SeatType @default(REGULAR)
+
+  seatTemplate SeatTemplate @relation(fields: [seatTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([seatTemplateId, label])
+  @@index([seatTemplateId])
+  @@map("seats")
+}
+
+enum SeatType {
+  REGULAR
+  VIP
+  DRIVER
+  DISABLED
+  BLOCKED
+}
+
+// ─────────────────────────────────────────────────────────────
+// الرحلات ومقاعد الرحلة
+// ─────────────────────────────────────────────────────────────
+
+model Trip {
+  id               String     @id @default(cuid())
+  organizationId   String
+  branchId         String?
+  routeId          String
+  busId            String
+  driverId         String?
+  driverName       String?
+  driverPhone      String?
+  departureAt      DateTime
+  arrivalAt        DateTime?
+  status           TripStatus @default(SCHEDULED)
+  manifestLockedAt DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  route        Route        @relation(fields: [routeId], references: [id])
+  bus          Bus          @relation(fields: [busId], references: [id])
+  driver       Driver?      @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  tripSeats    TripSeat[]
+  bookings     Booking[]
+  tickets      Ticket[]
+  manifest     Manifest?
+  expenses     Expense[]
+
+  @@index([organizationId, departureAt])
+  @@index([branchId, departureAt])
+  @@index([driverId, departureAt])
+  @@map("trips")
+}
+
+enum TripStatus {
+  SCHEDULED
+  OPEN
+  FULL
+  DEPARTED
+  COMPLETED
+  CANCELLED
+}
+
+model TripSeat {
+  id            String     @id @default(cuid())
+  tripId        String
+  row           Int
+  column        Int
+  label         String
+  seatType      SeatType   @default(REGULAR)
+  price         Decimal    @db.Decimal(12, 2)
+  status        SeatStatus @default(AVAILABLE)
+  heldByUserId  String?
+  holdExpiresAt DateTime?
+  ticketId      String?    @unique
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  trip    Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@unique([tripId, label])
+  @@index([tripId, status])
+  @@map("trip_seats")
+}
+
+enum SeatStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  BLOCKED
+}
+
+// ─────────────────────────────────────────────────────────────
+// الحجوزات والتذاكر
+// ─────────────────────────────────────────────────────────────
+
+model Booking {
+  id                 String        @id @default(cuid())
+  organizationId     String
+  branchId           String?
+  tripId             String
+  customerId         String?
+  agentId            String?
+  createdById        String
+  idempotencyKey     String?
+  totalAmount        Decimal       @db.Decimal(12, 2)
+  status             BookingStatus @default(PENDING)
+  notes              String?
+  cancellationReason String?
+  cancelledAt        DateTime?
+  cancelledById      String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  trip         Trip         @relation(fields: [tripId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  agent        Agent?       @relation(fields: [agentId], references: [id])
+  tickets      Ticket[]
+  payments     Payment[]
+  commissions  Commission[]
+  refunds      Refund[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, tripId])
+  @@index([branchId, createdAt])
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+model Ticket {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  bookingId           String
+  tripId              String
+  tripSeatId          String
+  number              String       @unique // رقم تذكرة قابل للقراءة
+  passengerName       String
+  passengerPhone      String
+  passengerNationalId String?
+  seatLabel           String
+  boardingStop        String?
+  dropOffStop         String?
+  fare                Decimal      @db.Decimal(12, 2)
+  status              TicketStatus @default(BOOKED)
+  qrCode              String       @unique
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  booking      Booking      @relation(fields: [bookingId], references: [id])
+  trip         Trip         @relation(fields: [tripId], references: [id])
+  tripSeat     TripSeat     @relation(fields: [tripSeatId], references: [id])
+  commission   Commission?
+
+  @@index([organizationId, tripId])
+  @@index([tripSeatId])
+  @@map("tickets")
+}
+
+enum TicketStatus {
+  BOOKED
+  CHECKED_IN
+  CANCELLED
+  REFUNDED
+  NO_SHOW
+}
+
+// ─────────────────────────────────────────────────────────────
+// المدفوعات
+// ─────────────────────────────────────────────────────────────
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  branchId       String?
+  bookingId      String
+  amount         Decimal       @db.Decimal(12, 2)
+  refundedAmount Decimal       @default(0) @db.Decimal(12, 2)
+  method         PaymentMethod
+  status         PaymentStatus @default(COMPLETED)
+  reference      String?
+  idempotencyKey String?
+  receivedById   String
+  createdAt      DateTime      @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  booking      Booking      @relation(fields: [bookingId], references: [id])
+  refunds      Refund[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, bookingId])
+  @@index([branchId, createdAt])
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANKAK
+  MTN_MOMO
+  ZAIN_CASH
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  COMPLETED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  organizationId String
+  bookingId      String
+  paymentId      String
+  amount         Decimal      @db.Decimal(12, 2)
+  reason         String
+  status         RefundStatus @default(COMPLETED)
+  processedById  String
+  createdAt      DateTime     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  booking      Booking      @relation(fields: [bookingId], references: [id])
+  payment      Payment      @relation(fields: [paymentId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([bookingId])
+  @@map("refunds")
+}
+
+enum RefundStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model IdempotencyRecord {
+  id             String            @id @default(cuid())
+  organizationId String
+  endpoint       String
+  key            String
+  requestHash    String
+  status         IdempotencyStatus @default(PROCESSING)
+  responseStatus Int?
+  responseBody   Json?
+  resourceType   String?
+  resourceId     String?
+  createdAt      DateTime          @default(now())
+  expiresAt      DateTime
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, endpoint, key])
+  @@index([status, expiresAt])
+  @@map("idempotency_records")
+}
+
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ─────────────────────────────────────────────────────────────
+// المنفستو
+// ─────────────────────────────────────────────────────────────
+
+model Manifest {
+  id             String    @id @default(cuid())
+  organizationId String
+  tripId         String    @unique
+  generatedById  String
+  generatedAt    DateTime  @default(now())
+  lockedAt       DateTime?
+  version        Int       @default(1)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  trip         Trip         @relation(fields: [tripId], references: [id])
+
+  @@index([organizationId, tripId])
+  @@map("manifests")
+}
+
+// ─────────────────────────────────────────────────────────────
+// الوكلاء والعمولات
+// ─────────────────────────────────────────────────────────────
+
+enum AgentType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum CommissionType {
+  PERCENT
+  FIXED
+}
+
+model Agent {
+  id              String         @id @default(cuid())
+  organizationId  String
+  branchId        String?
+  userId          String?        @unique
+  name            String
+  phone           String?
+  type            AgentType      @default(EXTERNAL)
+  commissionType  CommissionType @default(PERCENT)
+  commissionValue Decimal        @default(0) @db.Decimal(12, 2)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id])
+  commissions  Commission[]
+  bookings     Booking[]
+  settlements  Settlement[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@map("agents")
+}
+
+model Commission {
+  id             String    @id @default(cuid())
+  organizationId String
+  agentId        String
+  bookingId      String
+  ticketId       String    @unique
+  amount         Decimal   @db.Decimal(12, 2)
+  reversedAt     DateTime?
+  reversalReason String?
+  createdAt      DateTime  @default(now())
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agent          Agent           @relation(fields: [agentId], references: [id])
+  booking        Booking         @relation(fields: [bookingId], references: [id])
+  ticket         Ticket          @relation(fields: [ticketId], references: [id])
+  settlementLine SettlementLine?
+
+  @@index([organizationId, agentId])
+  @@map("commissions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// المصروفات
+// ─────────────────────────────────────────────────────────────
+
+enum ExpenseCategory {
+  FUEL
+  STATION_FEES
+  MAINTENANCE
+  SALARY
+  RENT
+  INSURANCE
+  OTHER
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  branchId       String?
+  tripId         String?
+  busId          String?
+  category       ExpenseCategory @default(OTHER)
+  description    String
+  amount         Decimal         @db.Decimal(12, 2)
+  status         ExpenseStatus   @default(DRAFT)
+  createdById    String
+  approvedById   String?
+  approvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  trip         Trip?               @relation(fields: [tripId], references: [id])
+  bus          Bus?                @relation(fields: [busId], references: [id])
+  adjustments  ExpenseAdjustment[]
+
+  @@index([organizationId, createdAt])
+  @@index([branchId, createdAt])
+  @@map("expenses")
+}
+
+enum ExpenseStatus {
+  DRAFT
+  APPROVED
+  ADJUSTED
+}
+
+model ExpenseAdjustment {
+  id             String         @id @default(cuid())
+  organizationId String
+  expenseId      String
+  type           AdjustmentType
+  amount         Decimal        @db.Decimal(12, 2)
+  reason         String
+  createdById    String
+  createdAt      DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expense      Expense      @relation(fields: [expenseId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([expenseId])
+  @@map("expense_adjustments")
+}
+
+enum AdjustmentType {
+  INCREASE
+  DECREASE
+}
+
+// ─────────────────────────────────────────────────────────────
+// التسويات
+// ─────────────────────────────────────────────────────────────
+
+enum SettlementStatus {
+  OPEN
+  SETTLED
+}
+
+model Settlement {
+  id               String           @id @default(cuid())
+  organizationId   String
+  agentId          String
+  fromDate         DateTime
+  toDate           DateTime
+  salesAmount      Decimal          @default(0) @db.Decimal(12, 2)
+  commissionAmount Decimal          @default(0) @db.Decimal(12, 2)
+  netAmount        Decimal          @default(0) @db.Decimal(12, 2)
+  status           SettlementStatus @default(OPEN)
+  settledAt        DateTime?
+  settledById      String?
+  createdAt        DateTime         @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agent        Agent            @relation(fields: [agentId], references: [id])
+  lines        SettlementLine[]
+
+  @@unique([organizationId, agentId, fromDate, toDate])
+  @@index([organizationId, agentId])
+  @@map("settlements")
+}
+
+model SettlementLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  settlementId   String
+  commissionId   String   @unique
+  amount         Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  settlement   Settlement   @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  commission   Commission   @relation(fields: [commissionId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, settlementId])
+  @@map("settlement_lines")
+}
+
+// ─────────────────────────────────────────────────────────────
+// سجل التدقيق
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  branchId       String?
+  userId         String?
+  action         String // e.g. BOOKING_CREATED, SEAT_HELD, MANIFEST_PRINTED
+  entity         String? // e.g. Booking, Ticket
+  entityId       String?
+  meta           Json?
+  createdAt      DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([branchId, createdAt])
+  @@map("audit_logs")
+}

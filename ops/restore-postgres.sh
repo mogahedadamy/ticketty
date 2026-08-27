@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: RESTORE_DATABASE_URL=postgresql://... $0 BACKUP.dump" >&2
+  exit 2
+fi
+if [[ -z "${RESTORE_DATABASE_URL:-}" ]]; then
+  echo "RESTORE_DATABASE_URL is required" >&2
+  exit 2
+fi
+if [[ -n "${DATABASE_URL:-}" && "$RESTORE_DATABASE_URL" == "$DATABASE_URL" && "${ALLOW_IN_PLACE_RESTORE:-no}" != "yes" ]]; then
+  echo "Refusing to restore over DATABASE_URL. Use a scratch database or set ALLOW_IN_PLACE_RESTORE=yes explicitly." >&2
+  exit 2
+fi
+
+backup_file="$1"
+if [[ ! -f "$backup_file" ]]; then
+  echo "Backup not found: $backup_file" >&2
+  exit 2
+fi
+if [[ -f "$backup_file.sha256" ]]; then
+  sha256sum --check "$backup_file.sha256"
+fi
+
+pg_restore --list "$backup_file" >/dev/null
+pg_restore \
+  --exit-on-error \
+  --single-transaction \
+  --no-owner \
+  --no-acl \
+  --dbname "$RESTORE_DATABASE_URL" \
+  "$backup_file"
+
+printf 'Restore completed into the configured scratch database. Run migrations and integrity smoke tests before approval.\n'

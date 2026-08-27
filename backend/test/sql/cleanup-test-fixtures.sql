@@ -1,0 +1,15 @@
+DELETE FROM "commissions" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "tickets" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "refunds" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "payments" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "bookings" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "settlements" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "trip_seats" WHERE "tripId" IN (SELECT "id" FROM "trips" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%'));
+DELETE FROM "trips" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "agents" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "buses" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "routes" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "seat_templates" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "users" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "roles" WHERE "organizationId" IN (SELECT "id" FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%');
+DELETE FROM "organizations" WHERE "slug" LIKE 'test-agent-org-%';

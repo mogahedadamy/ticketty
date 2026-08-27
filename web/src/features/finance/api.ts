@@ -1,0 +1,5 @@
+import{apiClient}from"@/lib/api-client";import type{Expense,ExpenseInput,FinancialSummary,Settlement}from"./types";
+const range=(from?:string,to?:string)=>{const p=new URLSearchParams();if(from)p.set("from",from);if(to)p.set("to",to);return p.size?`?${p}`:""};
+export const fetchFinancial=(from?:string,to?:string)=>apiClient<FinancialSummary>(`/reports/financial${range(from,to)}`);
+export const fetchExpenses=()=>apiClient<Expense[]>("/expenses");export const createExpense=(input:ExpenseInput)=>apiClient<Expense>("/expenses",{method:"POST",body:input});export const approveExpense=(id:string)=>apiClient<Expense>(`/expenses/${id}/approve`,{method:"POST"});export const adjustExpense=(id:string,input:{type:"INCREASE"|"DECREASE";amount:number;reason:string})=>apiClient(`/expenses/${id}/adjustments`,{method:"POST",body:input});
+export const fetchSettlements=()=>apiClient<Settlement[]>("/settlements");export const generateSettlement=(input:{agentId:string;from:string;to:string})=>apiClient<Settlement>("/settlements/generate",{method:"POST",body:input});export const settle=(id:string)=>apiClient<Settlement>(`/settlements/${id}/settle`,{method:"POST"});

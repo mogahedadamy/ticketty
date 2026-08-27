@@ -1,0 +1,34 @@
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthUser } from '../common/decorators/current-user.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
+import { TicketsService } from './tickets.service';
+
+@Controller('tickets')
+export class TicketsController {
+  constructor(private readonly ticketsService: TicketsService) {}
+
+  @Get()
+  @Permissions('tickets.read', 'tickets.read.own')
+  findAll(@CurrentUser() user: AuthUser, @Query('tripId') tripId?: string) {
+    return this.ticketsService.findAll(user, tripId);
+  }
+
+  @Get('by-qr/:qr')
+  @Permissions('tickets.read', 'tickets.read.own')
+  findByQr(@CurrentUser() user: AuthUser, @Param('qr') qr: string) {
+    return this.ticketsService.findByQr(user, qr);
+  }
+
+  @Get(':id')
+  @Permissions('tickets.read', 'tickets.read.own')
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.ticketsService.findOne(user, id);
+  }
+
+  @Post(':id/check-in')
+  @Permissions('tickets.write', 'tickets.write.own')
+  checkIn(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.ticketsService.checkIn(user, id);
+  }
+}

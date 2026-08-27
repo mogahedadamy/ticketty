@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-08-27T11:18:52+02:00",
+  "overall": 66,
+  "productionReadiness": 74,
+  "weights": {
+    "architecture": 8,
+    "database": 10,
+    "security": 12,
+    "backend": 15,
+    "erpBusinessLogic": 15,
+    "accounting": 10,
+    "frontend": 12,
+    "testing": 8,
+    "devopsObservability": 5,
+    "documentation": 5
+  },
+  "domains": {
+    "architecture": 45,
+    "database": 78,
+    "security": 74,
+    "backend": 75,
+    "erpBusinessLogic": 52,
+    "accounting": 30,
+    "frontend": 58,
+    "testing": 52,
+    "devopsObservability": 55,
+    "documentation": 58
+  },
+  "criticalBlockers": [
+    "Verified transaction-bound runtime RLS is absent",
+    "Missing authoritative double-entry accounting",
+    "Missing frontend and broad authorization/load coverage",
+    "No completed staging deployment and backup/restore drill"
+  ],
+  "highRisks": [
+    "Financial policy decisions and reconciliation remain open",
+    "Hosted metrics, alerts, tracing, and SLO evidence are absent",
+    "Repository still has no reviewed version-control baseline",
+    "Production container execution has not yet been verified"
+  ],
+  "lastValidatedAt": "2026-08-27T11:18:52+02:00",
+  "lastValidated": {
+    "backendTests": "15 suites, 40 tests passed; e2e 3 suites, 7 tests passed",
+    "databaseContracts": "refund, tenant consistency, and settlement integrity passed",
+    "backendBuild": "passed",
+    "prismaValidate": "passed",
+    "webBuild": "passed with 16 routes and standalone output",
+    "webLint": "passed",
+    "webTypecheck": "passed",
+    "webAudit": "passed",
+    "backendAudit": "passed after patched transitive override",
+    "composeConfig": "passed; image builds await a Docker-enabled environment"
+  },
+  "nextActions": [
+    "Implement and prove transaction-bound runtime RLS",
+    "Resolve finance policies and implement double-entry accounting",
+    "Add frontend browser tests and broader authorization/load coverage",
+    "Run container smoke tests and a documented scratch restore drill",
+    "Configure hosted telemetry, alerts, and SLOs"
+  ]
+}

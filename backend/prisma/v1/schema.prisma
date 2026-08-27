@@ -1,0 +1,1432 @@
+// Ticketty Database Contract v1.0 — candidate schema
+// IMPORTANT: This is a validation candidate. prisma.config.ts still points to ../schema.prisma.
+// SQL-only checks, exclusion constraints, immutability triggers, and RLS live in ./sql/.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/v1-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum RoleScope {
+  SYSTEM
+  TENANT
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum SeatType {
+  REGULAR
+  VIP
+  ACCESSIBLE
+  CREW
+  BLOCKED
+}
+
+enum BusStatus {
+  READY
+  MAINTENANCE
+  OUT_OF_SERVICE
+  ARCHIVED
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum TripStatus {
+  DRAFT
+  SCHEDULED
+  BOARDING
+  DEPARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum TripSeatStatus {
+  AVAILABLE
+  HELD
+  SOLD
+  BLOCKED
+}
+
+enum HoldStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+  RELEASED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  PARTIALLY_CANCELLED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum BookingItemStatus {
+  RESERVED
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+  USED
+}
+
+enum TicketStatus {
+  ISSUED
+  CHECKED_IN
+  USED
+  CANCELLED
+  REFUNDED
+  EXPIRED
+}
+
+enum TicketEventType {
+  ISSUED
+  REPRINTED
+  CHECKED_IN
+  USED
+  CANCELLED
+  REFUNDED
+  EXPIRED
+  OVERRIDE
+}
+
+enum BoardingEventType {
+  CHECK_IN
+  CHECK_IN_REJECTED
+  OVERRIDE
+  BOARDING_REVERSED
+}
+
+enum ManifestStatus {
+  OPEN
+  LOCKED
+}
+
+enum AgentStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum CommissionRuleType {
+  FIXED
+  PERCENTAGE
+}
+
+enum AgentTransactionType {
+  SALE
+  COMMISSION
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+  SETTLEMENT
+  REVERSAL
+}
+
+enum SettlementStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  CANCELLED
+}
+
+enum PaymentPayerType {
+  CUSTOMER
+  AGENT
+  ORGANIZATION
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  BANKAK
+  MTN_MOMO
+  ZAIN_CASH
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  COMPLETED
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  CANCELLED
+}
+
+enum AllocationTargetType {
+  BOOKING
+  AGENT_SETTLEMENT
+  EXPENSE
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  POSTED
+  REJECTED
+  CANCELLED
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSING
+  CLOSED
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+enum AdjustmentStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  REJECTED
+  CANCELLED
+}
+
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  DEAD_LETTER
+}
+
+enum ProviderEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum NumberSequenceScope {
+  ORGANIZATION
+  BRANCH
+}
+
+model Currency {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String             @unique @db.VarChar(3)
+  name           String             @db.VarChar(100)
+  minorUnits     Int                @default(2)
+  active         Boolean            @default(true)
+  organizations  Organization[]
+  trips          Trip[]
+  bookings       Booking[]
+  agents         Agent[]
+  agentTxns      AgentTransaction[]
+  settlements    AgentSettlement[]
+  payments       Payment[]
+  refunds        Refund[]
+  expenses       Expense[]
+  tripSeats      TripSeat[]
+  tickets        Ticket[]
+  journalEntries JournalEntry[]
+  journalLines   JournalEntryLine[]
+
+  @@map("currencies")
+}
+
+model Organization {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String                   @unique @db.VarChar(40)
+  legalName         String                   @map("legal_name") @db.VarChar(200)
+  displayName       String                   @map("display_name") @db.VarChar(200)
+  status            RecordStatus             @default(ACTIVE)
+  defaultCurrencyId String                   @map("default_currency_id") @db.Uuid
+  timezone          String                   @db.VarChar(64)
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  defaultCurrency   Currency                 @relation(fields: [defaultCurrencyId], references: [id])
+  branches          Branch[]
+  memberships       OrganizationMembership[]
+  roles             Role[]
+  stations          Station[]
+  routes            Route[]
+  seatLayouts       SeatLayout[]
+  busModels         BusModel[]
+  buses             Bus[]
+  drivers           Driver[]
+  trips             Trip[]
+  passengers        Passenger[]
+  customers         Customer[]
+  bookings          Booking[]
+  agents            Agent[]
+  payments          Payment[]
+  expenses          Expense[]
+  accounts          Account[]
+  fiscalPeriods     FiscalPeriod[]
+  journals          Journal[]
+  fileAssets        FileAsset[]
+  numberSequences   NumberSequence[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String             @map("organization_id") @db.Uuid
+  code             String             @db.VarChar(40)
+  name             String             @db.VarChar(160)
+  status           RecordStatus       @default(ACTIVE)
+  timezone         String             @db.VarChar(64)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membershipScopes MembershipBranch[]
+  buses            Bus[]
+  drivers          Driver[]
+  trips            Trip[]
+  bookings         Booking[]
+  agents           Agent[]
+  payments         Payment[]
+  expenses         Expense[]
+  manifests        Manifest[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@map("branches")
+}
+
+model User {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String                   @unique @db.VarChar(320)
+  phone        String?                  @db.VarChar(32)
+  passwordHash String                   @map("password_hash") @db.VarChar(255)
+  status       RecordStatus             @default(ACTIVE)
+  lastLoginAt  DateTime?                @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  memberships  OrganizationMembership[]
+
+  @@map("users")
+}
+
+model OrganizationMembership {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  userId         String             @map("user_id") @db.Uuid
+  status         MembershipStatus   @default(ACTIVE)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branches       MembershipBranch[]
+  roles          MembershipRole[]
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([userId, status])
+  @@map("organization_memberships")
+}
+
+model MembershipBranch {
+  organizationId String                 @map("organization_id") @db.Uuid
+  membershipId   String                 @map("membership_id") @db.Uuid
+  branchId       String                 @map("branch_id") @db.Uuid
+  membership     OrganizationMembership @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  branch         Branch                 @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Cascade)
+
+  @@id([membershipId, branchId])
+  @@index([organizationId, branchId])
+  @@map("membership_branches")
+}
+
+model Role {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String?          @map("organization_id") @db.Uuid
+  scope          RoleScope
+  code           String           @db.VarChar(80)
+  name           String           @db.VarChar(160)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  permissions    RolePermission[]
+  memberships    MembershipRole[]
+
+  @@unique([organizationId, code])
+  @@index([scope, code])
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String           @unique @db.VarChar(120)
+  description String           @db.VarChar(500)
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  organizationId String?    @map("organization_id") @db.Uuid
+  roleId         String     @map("role_id") @db.Uuid
+  permissionId   String     @map("permission_id") @db.Uuid
+  role           Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission     Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@id([roleId, permissionId])
+  @@index([organizationId, roleId])
+  @@map("role_permissions")
+}
+
+model MembershipRole {
+  organizationId String                 @map("organization_id") @db.Uuid
+  membershipId   String                 @map("membership_id") @db.Uuid
+  roleId         String                 @map("role_id") @db.Uuid
+  membership     OrganizationMembership @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+  role           Role                   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([membershipId, roleId])
+  @@index([organizationId, roleId])
+  @@map("membership_roles")
+}
+
+model Station {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String       @map("organization_id") @db.Uuid
+  code              String       @db.VarChar(40)
+  name              String       @db.VarChar(160)
+  city              String       @db.VarChar(120)
+  address           String?      @db.VarChar(500)
+  latitude          Decimal?     @db.Decimal(9, 6)
+  longitude         Decimal?     @db.Decimal(9, 6)
+  status            RecordStatus @default(ACTIVE)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  originRoutes      Route[]      @relation("RouteOrigin")
+  destinationRoutes Route[]      @relation("RouteDestination")
+  routeStops        RouteStop[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@map("stations")
+}
+
+model Route {
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId           String       @map("organization_id") @db.Uuid
+  code                     String       @db.VarChar(40)
+  name                     String       @db.VarChar(200)
+  originStationId          String       @map("origin_station_id") @db.Uuid
+  destinationStationId     String       @map("destination_station_id") @db.Uuid
+  distanceKm               Decimal?     @map("distance_km") @db.Decimal(10, 2)
+  estimatedDurationMinutes Int?         @map("estimated_duration_minutes")
+  status                   RecordStatus @default(ACTIVE)
+  createdAt                DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  originStation            Station      @relation("RouteOrigin", fields: [organizationId, originStationId], references: [organizationId, id], onDelete: Restrict)
+  destinationStation       Station      @relation("RouteDestination", fields: [organizationId, destinationStationId], references: [organizationId, id], onDelete: Restrict)
+  stops                    RouteStop[]
+  trips                    Trip[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@map("routes")
+}
+
+model RouteStop {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  routeId                String   @map("route_id") @db.Uuid
+  stationId              String   @map("station_id") @db.Uuid
+  sequence               Int
+  arrivalOffsetMinutes   Int?     @map("arrival_offset_minutes")
+  departureOffsetMinutes Int?     @map("departure_offset_minutes")
+  distanceFromOriginKm   Decimal? @map("distance_from_origin_km") @db.Decimal(10, 2)
+  route                  Route    @relation(fields: [organizationId, routeId], references: [organizationId, id], onDelete: Cascade)
+  station                Station  @relation(fields: [organizationId, stationId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([routeId, sequence])
+  @@unique([routeId, stationId])
+  @@index([organizationId, stationId])
+  @@map("route_stops")
+}
+
+model SeatLayout {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  name           String           @db.VarChar(160)
+  layoutType     String           @map("layout_type") @db.VarChar(40)
+  version        Int
+  status         AssetStatus      @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  seats          SeatDefinition[]
+  busModels      BusModel[]
+  trips          Trip[]
+
+  @@unique([organizationId, name, version])
+  @@unique([organizationId, id])
+  @@map("seat_layouts")
+}
+
+model SeatDefinition {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  seatLayoutId   String     @map("seat_layout_id") @db.Uuid
+  seatCode       String     @map("seat_code") @db.VarChar(20)
+  rowNumber      Int        @map("row_number")
+  columnNumber   Int        @map("column_number")
+  position       String?    @db.VarChar(40)
+  seatType       SeatType   @default(REGULAR) @map("seat_type")
+  layout         SeatLayout @relation(fields: [organizationId, seatLayoutId], references: [organizationId, id], onDelete: Cascade)
+  tripSeats      TripSeat[]
+
+  @@unique([seatLayoutId, seatCode])
+  @@unique([organizationId, id])
+  @@index([seatLayoutId, rowNumber, columnNumber])
+  @@map("seat_definitions")
+}
+
+model BusModel {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  manufacturer   String       @db.VarChar(120)
+  model          String       @db.VarChar(120)
+  seatLayoutId   String       @map("seat_layout_id") @db.Uuid
+  status         AssetStatus  @default(ACTIVE)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  seatLayout     SeatLayout   @relation(fields: [organizationId, seatLayoutId], references: [organizationId, id], onDelete: Restrict)
+  buses          Bus[]
+
+  @@unique([organizationId, manufacturer, model, seatLayoutId])
+  @@unique([organizationId, id])
+  @@map("bus_models")
+}
+
+model Bus {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String       @map("organization_id") @db.Uuid
+  branchId           String       @map("branch_id") @db.Uuid
+  busModelId         String       @map("bus_model_id") @db.Uuid
+  code               String       @db.VarChar(40)
+  registrationNumber String       @map("registration_number") @db.VarChar(80)
+  status             BusStatus    @default(READY)
+  licenseExpiry      DateTime?    @map("license_expiry") @db.Date
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch             Branch       @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  busModel           BusModel     @relation(fields: [organizationId, busModelId], references: [organizationId, id], onDelete: Restrict)
+  trips              Trip[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, registrationNumber])
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, status])
+  @@map("buses")
+}
+
+model Driver {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  branchId       String           @map("branch_id") @db.Uuid
+  employeeCode   String           @map("employee_code") @db.VarChar(40)
+  firstName      String           @map("first_name") @db.VarChar(100)
+  lastName       String           @map("last_name") @db.VarChar(100)
+  phone          String?          @db.VarChar(32)
+  status         DriverStatus     @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch         Branch           @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  documents      DriverDocument[]
+  trips          Trip[]
+
+  @@unique([organizationId, employeeCode])
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, status])
+  @@map("drivers")
+}
+
+model FileAsset {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String           @map("organization_id") @db.Uuid
+  storageProvider String           @map("storage_provider") @db.VarChar(40)
+  objectKey       String           @map("object_key") @db.VarChar(1024)
+  filename        String           @db.VarChar(255)
+  mimeType        String           @map("mime_type") @db.VarChar(160)
+  sizeBytes       BigInt           @map("size_bytes")
+  checksum        String           @db.VarChar(128)
+  encrypted       Boolean          @default(false)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  driverDocuments DriverDocument[]
+
+  @@unique([organizationId, objectKey])
+  @@unique([organizationId, id])
+  @@map("file_assets")
+}
+
+model DriverDocument {
+  id                       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId           String      @map("organization_id") @db.Uuid
+  driverId                 String      @map("driver_id") @db.Uuid
+  documentType             String      @map("document_type") @db.VarChar(60)
+  documentNumberEncrypted  Bytes       @map("document_number_encrypted")
+  documentNumberBlindIndex String      @map("document_number_blind_index") @db.VarChar(128)
+  issuedAt                 DateTime?   @map("issued_at") @db.Date
+  expiresAt                DateTime?   @map("expires_at") @db.Date
+  fileAssetId              String?     @map("file_asset_id") @db.Uuid
+  status                   AssetStatus @default(ACTIVE)
+  driver                   Driver      @relation(fields: [organizationId, driverId], references: [organizationId, id], onDelete: Restrict)
+  fileAsset                FileAsset?  @relation(fields: [organizationId, fileAssetId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, documentType, documentNumberBlindIndex])
+  @@index([driverId, expiresAt])
+  @@map("driver_documents")
+}
+
+model Trip {
+  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String          @map("organization_id") @db.Uuid
+  branchId             String          @map("branch_id") @db.Uuid
+  routeId              String          @map("route_id") @db.Uuid
+  serviceDate          DateTime        @map("service_date") @db.Date
+  scheduledDepartureAt DateTime        @map("scheduled_departure_at") @db.Timestamptz(6)
+  scheduledArrivalAt   DateTime        @map("scheduled_arrival_at") @db.Timestamptz(6)
+  actualDepartureAt    DateTime?       @map("actual_departure_at") @db.Timestamptz(6)
+  actualArrivalAt      DateTime?       @map("actual_arrival_at") @db.Timestamptz(6)
+  status               TripStatus      @default(DRAFT)
+  currencyId           String          @map("currency_id") @db.Uuid
+  baseFare             Decimal         @map("base_fare") @db.Decimal(19, 4)
+  busId                String?         @map("bus_id") @db.Uuid
+  driverId             String?         @map("driver_id") @db.Uuid
+  seatLayoutId         String          @map("seat_layout_id") @db.Uuid
+  version              Int             @default(0)
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch               Branch          @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  route                Route           @relation(fields: [organizationId, routeId], references: [organizationId, id], onDelete: Restrict)
+  currency             Currency        @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  bus                  Bus?            @relation(fields: [organizationId, busId], references: [organizationId, id], onDelete: Restrict)
+  driver               Driver?         @relation(fields: [organizationId, driverId], references: [organizationId, id], onDelete: Restrict)
+  seatLayout           SeatLayout      @relation(fields: [organizationId, seatLayoutId], references: [organizationId, id], onDelete: Restrict)
+  seats                TripSeat[]
+  bookings             Booking[]
+  manifests            Manifest[]
+  boardingEvents       BoardingEvent[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, serviceDate])
+  @@index([organizationId, branchId, serviceDate])
+  @@index([organizationId, status])
+  @@index([routeId, serviceDate])
+  @@index([busId, scheduledDepartureAt])
+  @@index([driverId, scheduledDepartureAt])
+  @@map("trips")
+}
+
+model TripSeat {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String         @map("organization_id") @db.Uuid
+  tripId           String         @map("trip_id") @db.Uuid
+  seatDefinitionId String         @map("seat_definition_id") @db.Uuid
+  seatCode         String         @map("seat_code") @db.VarChar(20)
+  rowNumber        Int            @map("row_number")
+  columnNumber     Int            @map("column_number")
+  seatType         SeatType       @map("seat_type")
+  status           TripSeatStatus @default(AVAILABLE)
+  fare             Decimal        @db.Decimal(19, 4)
+  currencyId       String         @map("currency_id") @db.Uuid
+  holdExpiresAt    DateTime?      @map("hold_expires_at") @db.Timestamptz(6)
+  version          Int            @default(0)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  trip             Trip           @relation(fields: [organizationId, tripId], references: [organizationId, id], onDelete: Cascade)
+  seatDefinition   SeatDefinition @relation(fields: [organizationId, seatDefinitionId], references: [organizationId, id], onDelete: Restrict)
+  currency         Currency       @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  holds            SeatHold[]
+  bookingItems     BookingItem[]
+
+  @@unique([tripId, seatDefinitionId])
+  @@unique([tripId, seatCode])
+  @@unique([tripId, rowNumber, columnNumber])
+  @@unique([organizationId, id])
+  @@index([tripId, status])
+  @@map("trip_seats")
+}
+
+model SeatHold {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String     @map("organization_id") @db.Uuid
+  tripSeatId         String     @map("trip_seat_id") @db.Uuid
+  bookingId          String?    @map("booking_id") @db.Uuid
+  heldByMembershipId String?    @map("held_by_membership_id") @db.Uuid
+  status             HoldStatus @default(ACTIVE)
+  expiresAt          DateTime   @map("expires_at") @db.Timestamptz(6)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  releasedAt         DateTime?  @map("released_at") @db.Timestamptz(6)
+  tripSeat           TripSeat   @relation(fields: [organizationId, tripSeatId], references: [organizationId, id], onDelete: Restrict)
+  booking            Booking?   @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([tripSeatId, status, expiresAt])
+  @@index([organizationId, heldByMembershipId, status])
+  @@map("seat_holds")
+}
+
+model Customer {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  displayName    String       @map("display_name") @db.VarChar(200)
+  phone          String?      @db.VarChar(32)
+  email          String?      @db.VarChar(320)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookings       Booking[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, phone])
+  @@map("customers")
+}
+
+model Passenger {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String        @map("organization_id") @db.Uuid
+  firstName          String        @map("first_name") @db.VarChar(100)
+  lastName           String        @map("last_name") @db.VarChar(100)
+  phone              String?       @db.VarChar(32)
+  idNumberEncrypted  Bytes?        @map("id_number_encrypted")
+  idNumberBlindIndex String?       @map("id_number_blind_index") @db.VarChar(128)
+  passportEncrypted  Bytes?        @map("passport_encrypted")
+  passportBlindIndex String?       @map("passport_blind_index") @db.VarChar(128)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingItems       BookingItem[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, phone])
+  @@index([organizationId, idNumberBlindIndex])
+  @@index([organizationId, passportBlindIndex])
+  @@map("passengers")
+}
+
+model Booking {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String              @map("organization_id") @db.Uuid
+  branchId              String              @map("branch_id") @db.Uuid
+  bookingNumber         String              @map("booking_number") @db.VarChar(60)
+  customerId            String?             @map("customer_id") @db.Uuid
+  tripId                String              @map("trip_id") @db.Uuid
+  agentId               String?             @map("agent_id") @db.Uuid
+  status                BookingStatus       @default(PENDING)
+  currencyId            String              @map("currency_id") @db.Uuid
+  subtotal              Decimal             @db.Decimal(19, 4)
+  discount              Decimal             @default(0) @db.Decimal(19, 4)
+  commission            Decimal             @default(0) @db.Decimal(19, 4)
+  tax                   Decimal             @default(0) @db.Decimal(19, 4)
+  total                 Decimal             @db.Decimal(19, 4)
+  createdByMembershipId String              @map("created_by_membership_id") @db.Uuid
+  version               Int                 @default(0)
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch                Branch              @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  customer              Customer?           @relation(fields: [organizationId, customerId], references: [organizationId, id], onDelete: Restrict)
+  trip                  Trip                @relation(fields: [organizationId, tripId], references: [organizationId, id], onDelete: Restrict)
+  agent                 Agent?              @relation(fields: [organizationId, agentId], references: [organizationId, id], onDelete: Restrict)
+  currency              Currency            @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  items                 BookingItem[]
+  holds                 SeatHold[]
+  allocations           PaymentAllocation[]
+
+  @@unique([organizationId, bookingNumber])
+  @@unique([organizationId, id])
+  @@index([organizationId, tripId, createdAt])
+  @@index([organizationId, branchId, createdAt])
+  @@index([organizationId, agentId, createdAt])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String              @map("organization_id") @db.Uuid
+  bookingId         String              @map("booking_id") @db.Uuid
+  tripSeatId        String              @map("trip_seat_id") @db.Uuid
+  passengerId       String              @map("passenger_id") @db.Uuid
+  fare              Decimal             @db.Decimal(19, 4)
+  discount          Decimal             @default(0) @db.Decimal(19, 4)
+  commission        Decimal             @default(0) @db.Decimal(19, 4)
+  tax               Decimal             @default(0) @db.Decimal(19, 4)
+  total             Decimal             @db.Decimal(19, 4)
+  status            BookingItemStatus   @default(RESERVED)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  booking           Booking             @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Restrict)
+  tripSeat          TripSeat            @relation(fields: [organizationId, tripSeatId], references: [organizationId, id], onDelete: Restrict)
+  passenger         Passenger           @relation(fields: [organizationId, passengerId], references: [organizationId, id], onDelete: Restrict)
+  tickets           Ticket[]
+  manifestSnapshots ManifestPassenger[]
+
+  @@unique([bookingId, tripSeatId])
+  @@unique([organizationId, id])
+  @@index([passengerId, createdAt])
+  @@map("booking_items")
+}
+
+model Ticket {
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String              @map("organization_id") @db.Uuid
+  bookingItemId        String              @map("booking_item_id") @db.Uuid
+  ticketNumber         String              @map("ticket_number") @db.VarChar(60)
+  qrIdentifier         String              @unique @map("qr_identifier") @db.VarChar(160)
+  qrVersion            Int                 @default(1) @map("qr_version")
+  documentVersion      Int                 @default(1) @map("document_version")
+  supersedesTicketId   String?             @map("supersedes_ticket_id") @db.Uuid
+  passengerName        String              @map("passenger_name") @db.VarChar(220)
+  passengerPhone       String?             @map("passenger_phone") @db.VarChar(32)
+  seatCode             String              @map("seat_code") @db.VarChar(20)
+  routeDisplay         String              @map("route_display") @db.VarChar(300)
+  scheduledDepartureAt DateTime            @map("scheduled_departure_at") @db.Timestamptz(6)
+  fare                 Decimal             @db.Decimal(19, 4)
+  currencyId           String              @map("currency_id") @db.Uuid
+  status               TicketStatus        @default(ISSUED)
+  issuedAt             DateTime            @default(now()) @map("issued_at") @db.Timestamptz(6)
+  cancelledAt          DateTime?           @map("cancelled_at") @db.Timestamptz(6)
+  usedAt               DateTime?           @map("used_at") @db.Timestamptz(6)
+  version              Int                 @default(0)
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  bookingItem          BookingItem         @relation(fields: [organizationId, bookingItemId], references: [organizationId, id], onDelete: Restrict)
+  supersedes           Ticket?             @relation("TicketReissue", fields: [organizationId, supersedesTicketId], references: [organizationId, id], onDelete: Restrict)
+  reissuedAs           Ticket?             @relation("TicketReissue")
+  currency             Currency            @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  events               TicketEvent[]
+  boardingEvents       BoardingEvent[]
+  manifestSnapshots    ManifestPassenger[]
+
+  @@unique([organizationId, ticketNumber])
+  @@unique([organizationId, supersedesTicketId])
+  @@unique([organizationId, id])
+  @@index([organizationId, status, issuedAt])
+  @@map("tickets")
+}
+
+model TicketEvent {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String          @map("organization_id") @db.Uuid
+  ticketId          String          @map("ticket_id") @db.Uuid
+  eventType         TicketEventType @map("event_type")
+  fromStatus        TicketStatus?   @map("from_status")
+  toStatus          TicketStatus    @map("to_status")
+  actorMembershipId String?         @map("actor_membership_id") @db.Uuid
+  metadata          Json?
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticket            Ticket          @relation(fields: [organizationId, ticketId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_events")
+}
+
+model Device {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  code           String          @db.VarChar(80)
+  publicKey      String          @map("public_key") @db.Text
+  status         RecordStatus    @default(ACTIVE)
+  lastSeenAt     DateTime?       @map("last_seen_at") @db.Timestamptz(6)
+  boardingEvents BoardingEvent[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@map("devices")
+}
+
+model BoardingEvent {
+  id                      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String            @map("organization_id") @db.Uuid
+  tripId                  String            @map("trip_id") @db.Uuid
+  ticketId                String            @map("ticket_id") @db.Uuid
+  eventType               BoardingEventType @map("event_type")
+  deviceId                String?           @map("device_id") @db.Uuid
+  performedByMembershipId String?           @map("performed_by_membership_id") @db.Uuid
+  offlineEventId          String?           @map("offline_event_id") @db.VarChar(160)
+  occurredAt              DateTime          @map("occurred_at") @db.Timestamptz(6)
+  syncedAt                DateTime?         @map("synced_at") @db.Timestamptz(6)
+  metadata                Json?
+  createdAt               DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  trip                    Trip              @relation(fields: [organizationId, tripId], references: [organizationId, id], onDelete: Restrict)
+  ticket                  Ticket            @relation(fields: [organizationId, ticketId], references: [organizationId, id], onDelete: Restrict)
+  device                  Device?           @relation(fields: [organizationId, deviceId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, offlineEventId])
+  @@index([tripId, createdAt])
+  @@index([ticketId, createdAt])
+  @@map("boarding_events")
+}
+
+model Manifest {
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String              @map("organization_id") @db.Uuid
+  branchId             String              @map("branch_id") @db.Uuid
+  tripId               String              @map("trip_id") @db.Uuid
+  version              Int                 @default(1)
+  supersedesManifestId String?             @map("supersedes_manifest_id") @db.Uuid
+  status               ManifestStatus      @default(OPEN)
+  openedAt             DateTime            @default(now()) @map("opened_at") @db.Timestamptz(6)
+  lockedAt             DateTime?           @map("locked_at") @db.Timestamptz(6)
+  lockedByMembershipId String?             @map("locked_by_membership_id") @db.Uuid
+  passengerCount       Int                 @default(0) @map("passenger_count")
+  grossSales           Decimal             @default(0) @map("gross_sales") @db.Decimal(19, 4)
+  totalCommission      Decimal             @default(0) @map("total_commission") @db.Decimal(19, 4)
+  netSales             Decimal             @default(0) @map("net_sales") @db.Decimal(19, 4)
+  snapshotVersion      Int                 @default(1) @map("snapshot_version")
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  branch               Branch              @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  trip                 Trip                @relation(fields: [organizationId, tripId], references: [organizationId, id], onDelete: Restrict)
+  supersedes           Manifest?           @relation("ManifestCorrection", fields: [organizationId, supersedesManifestId], references: [organizationId, id], onDelete: Restrict)
+  correctedBy          Manifest?           @relation("ManifestCorrection")
+  passengers           ManifestPassenger[]
+
+  @@unique([organizationId, tripId, version])
+  @@unique([organizationId, supersedesManifestId])
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, status])
+  @@map("manifests")
+}
+
+model ManifestPassenger {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String       @map("organization_id") @db.Uuid
+  manifestId        String       @map("manifest_id") @db.Uuid
+  ticketId          String       @map("ticket_id") @db.Uuid
+  bookingItemId     String       @map("booking_item_id") @db.Uuid
+  passengerName     String       @map("passenger_name") @db.VarChar(220)
+  documentReference String?      @map("document_reference") @db.VarChar(120)
+  seatCode          String       @map("seat_code") @db.VarChar(20)
+  fare              Decimal      @db.Decimal(19, 4)
+  commission        Decimal      @default(0) @db.Decimal(19, 4)
+  ticketStatus      TicketStatus @map("ticket_status")
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  manifest          Manifest     @relation(fields: [organizationId, manifestId], references: [organizationId, id], onDelete: Restrict)
+  ticket            Ticket       @relation(fields: [organizationId, ticketId], references: [organizationId, id], onDelete: Restrict)
+  bookingItem       BookingItem  @relation(fields: [organizationId, bookingItemId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([manifestId, ticketId])
+  @@index([manifestId, seatCode])
+  @@map("manifest_passengers")
+}
+
+model Agent {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String             @map("organization_id") @db.Uuid
+  branchId        String?            @map("branch_id") @db.Uuid
+  membershipId    String?            @map("membership_id") @db.Uuid
+  code            String             @db.VarChar(40)
+  name            String             @db.VarChar(200)
+  phone           String?            @db.VarChar(32)
+  status          AgentStatus        @default(ACTIVE)
+  creditLimit     Decimal            @default(0) @map("credit_limit") @db.Decimal(19, 4)
+  currencyId      String             @map("currency_id") @db.Uuid
+  version         Int                @default(0)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch          Branch?            @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  currency        Currency           @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  bookings        Booking[]
+  commissionRules CommissionRule[]
+  transactions    AgentTransaction[]
+  settlements     AgentSettlement[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, status])
+  @@map("agents")
+}
+
+model CommissionRule {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  agentId        String             @map("agent_id") @db.Uuid
+  type           CommissionRuleType
+  value          Decimal            @db.Decimal(19, 4)
+  effectiveFrom  DateTime           @map("effective_from") @db.Timestamptz(6)
+  effectiveTo    DateTime?          @map("effective_to") @db.Timestamptz(6)
+  status         AssetStatus        @default(ACTIVE)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  agent          Agent              @relation(fields: [organizationId, agentId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([agentId, status, effectiveFrom, effectiveTo])
+  @@map("commission_rules")
+}
+
+model AgentTransaction {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String                @map("organization_id") @db.Uuid
+  agentId         String                @map("agent_id") @db.Uuid
+  type            AgentTransactionType
+  referenceType   String                @map("reference_type") @db.VarChar(80)
+  referenceId     String                @map("reference_id") @db.Uuid
+  debit           Decimal               @default(0) @db.Decimal(19, 4)
+  credit          Decimal               @default(0) @db.Decimal(19, 4)
+  currencyId      String                @map("currency_id") @db.Uuid
+  occurredAt      DateTime              @map("occurred_at") @db.Timestamptz(6)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  agent           Agent                 @relation(fields: [organizationId, agentId], references: [organizationId, id], onDelete: Restrict)
+  currency        Currency              @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  settlementLines AgentSettlementLine[]
+
+  @@unique([organizationId, referenceType, referenceId, type])
+  @@unique([organizationId, id])
+  @@index([agentId, occurredAt])
+  @@map("agent_transactions")
+}
+
+model AgentSettlement {
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                @map("organization_id") @db.Uuid
+  agentId                String                @map("agent_id") @db.Uuid
+  settlementNumber       String                @map("settlement_number") @db.VarChar(60)
+  status                 SettlementStatus      @default(DRAFT)
+  periodStart            DateTime              @map("period_start") @db.Timestamptz(6)
+  periodEnd              DateTime              @map("period_end") @db.Timestamptz(6)
+  grossAmount            Decimal               @map("gross_amount") @db.Decimal(19, 4)
+  commissionAmount       Decimal               @map("commission_amount") @db.Decimal(19, 4)
+  netAmount              Decimal               @map("net_amount") @db.Decimal(19, 4)
+  currencyId             String                @map("currency_id") @db.Uuid
+  createdByMembershipId  String                @map("created_by_membership_id") @db.Uuid
+  approvedByMembershipId String?               @map("approved_by_membership_id") @db.Uuid
+  approvedAt             DateTime?             @map("approved_at") @db.Timestamptz(6)
+  postedAt               DateTime?             @map("posted_at") @db.Timestamptz(6)
+  journalEntryId         String?               @map("journal_entry_id") @db.Uuid
+  createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  agent                  Agent                 @relation(fields: [organizationId, agentId], references: [organizationId, id], onDelete: Restrict)
+  currency               Currency              @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  lines                  AgentSettlementLine[]
+  allocations            PaymentAllocation[]
+
+  @@unique([organizationId, settlementNumber])
+  @@unique([organizationId, id])
+  @@index([agentId, status, periodStart, periodEnd])
+  @@map("agent_settlements")
+}
+
+model AgentSettlementLine {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String           @map("organization_id") @db.Uuid
+  settlementId       String           @map("settlement_id") @db.Uuid
+  agentTransactionId String           @unique @map("agent_transaction_id") @db.Uuid
+  amount             Decimal          @db.Decimal(19, 4)
+  settlement         AgentSettlement  @relation(fields: [organizationId, settlementId], references: [organizationId, id], onDelete: Restrict)
+  agentTransaction   AgentTransaction @relation(fields: [organizationId, agentTransactionId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([settlementId, agentTransactionId])
+  @@map("agent_settlement_lines")
+}
+
+model Payment {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String                 @map("organization_id") @db.Uuid
+  branchId          String                 @map("branch_id") @db.Uuid
+  paymentNumber     String                 @map("payment_number") @db.VarChar(60)
+  payerType         PaymentPayerType       @map("payer_type")
+  payerId           String?                @map("payer_id") @db.Uuid
+  amount            Decimal                @db.Decimal(19, 4)
+  currencyId        String                 @map("currency_id") @db.Uuid
+  method            PaymentMethod
+  status            PaymentStatus          @default(PENDING)
+  provider          String?                @db.VarChar(80)
+  externalReference String?                @map("external_reference") @db.VarChar(200)
+  receivedAt        DateTime?              @map("received_at") @db.Timestamptz(6)
+  journalEntryId    String?                @map("journal_entry_id") @db.Uuid
+  version           Int                    @default(0)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch            Branch                 @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  currency          Currency               @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  allocations       PaymentAllocation[]
+  refunds           Refund[]
+  providerEvents    PaymentProviderEvent[]
+
+  @@unique([organizationId, paymentNumber])
+  @@unique([organizationId, id])
+  @@unique([organizationId, provider, externalReference])
+  @@index([organizationId, branchId, createdAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String               @map("organization_id") @db.Uuid
+  paymentId         String               @map("payment_id") @db.Uuid
+  targetType        AllocationTargetType @map("target_type")
+  bookingId         String?              @map("booking_id") @db.Uuid
+  agentSettlementId String?              @map("agent_settlement_id") @db.Uuid
+  expenseId         String?              @map("expense_id") @db.Uuid
+  amount            Decimal              @db.Decimal(19, 4)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  payment           Payment              @relation(fields: [organizationId, paymentId], references: [organizationId, id], onDelete: Restrict)
+  booking           Booking?             @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Restrict)
+  agentSettlement   AgentSettlement?     @relation(fields: [organizationId, agentSettlementId], references: [organizationId, id], onDelete: Restrict)
+  expense           Expense?             @relation(fields: [organizationId, expenseId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@index([bookingId])
+  @@index([agentSettlementId])
+  @@index([expenseId])
+  @@map("payment_allocations")
+}
+
+model Refund {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String       @map("organization_id") @db.Uuid
+  paymentId              String       @map("payment_id") @db.Uuid
+  refundNumber           String       @map("refund_number") @db.VarChar(60)
+  amount                 Decimal      @db.Decimal(19, 4)
+  currencyId             String       @map("currency_id") @db.Uuid
+  reason                 String       @db.VarChar(500)
+  status                 RefundStatus @default(PENDING)
+  providerReference      String?      @map("provider_reference") @db.VarChar(200)
+  approvedByMembershipId String?      @map("approved_by_membership_id") @db.Uuid
+  createdAt              DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt            DateTime?    @map("completed_at") @db.Timestamptz(6)
+  journalEntryId         String?      @map("journal_entry_id") @db.Uuid
+  payment                Payment      @relation(fields: [organizationId, paymentId], references: [organizationId, id], onDelete: Restrict)
+  currency               Currency     @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, refundNumber])
+  @@unique([organizationId, providerReference])
+  @@unique([organizationId, id])
+  @@index([paymentId, status])
+  @@map("refunds")
+}
+
+model PaymentProviderEvent {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String              @map("organization_id") @db.Uuid
+  paymentId       String?             @map("payment_id") @db.Uuid
+  provider        String              @db.VarChar(80)
+  providerEventId String              @map("provider_event_id") @db.VarChar(200)
+  eventType       String              @map("event_type") @db.VarChar(100)
+  payload         Json
+  signatureValid  Boolean             @map("signature_valid")
+  status          ProviderEventStatus @default(RECEIVED)
+  receivedAt      DateTime            @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt     DateTime?           @map("processed_at") @db.Timestamptz(6)
+  payment         Payment?            @relation(fields: [organizationId, paymentId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([provider, providerEventId])
+  @@index([organizationId, status, receivedAt])
+  @@map("payment_provider_events")
+}
+
+model Vendor {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  code           String       @db.VarChar(40)
+  name           String       @db.VarChar(200)
+  status         RecordStatus @default(ACTIVE)
+  expenses       Expense[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@map("vendors")
+}
+
+model Expense {
+  id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String              @map("organization_id") @db.Uuid
+  branchId               String              @map("branch_id") @db.Uuid
+  expenseNumber          String              @map("expense_number") @db.VarChar(60)
+  status                 ExpenseStatus       @default(DRAFT)
+  expenseDate            DateTime            @map("expense_date") @db.Date
+  vendorId               String?             @map("vendor_id") @db.Uuid
+  currencyId             String              @map("currency_id") @db.Uuid
+  subtotal               Decimal             @db.Decimal(19, 4)
+  tax                    Decimal             @default(0) @db.Decimal(19, 4)
+  total                  Decimal             @db.Decimal(19, 4)
+  description            String              @db.VarChar(1000)
+  createdByMembershipId  String              @map("created_by_membership_id") @db.Uuid
+  approvedByMembershipId String?             @map("approved_by_membership_id") @db.Uuid
+  approvedAt             DateTime?           @map("approved_at") @db.Timestamptz(6)
+  postedAt               DateTime?           @map("posted_at") @db.Timestamptz(6)
+  journalEntryId         String?             @map("journal_entry_id") @db.Uuid
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch                 Branch              @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Restrict)
+  vendor                 Vendor?             @relation(fields: [organizationId, vendorId], references: [organizationId, id], onDelete: Restrict)
+  currency               Currency            @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  allocations            PaymentAllocation[]
+
+  @@unique([organizationId, expenseNumber])
+  @@unique([organizationId, id])
+  @@index([organizationId, branchId, expenseDate])
+  @@index([organizationId, status])
+  @@map("expenses")
+}
+
+model Account {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String             @map("organization_id") @db.Uuid
+  code             String             @db.VarChar(40)
+  name             String             @db.VarChar(200)
+  type             AccountType
+  parentId         String?            @map("parent_id") @db.Uuid
+  isControlAccount Boolean            @default(false) @map("is_control_account")
+  status           RecordStatus       @default(ACTIVE)
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  parent           Account?           @relation("AccountHierarchy", fields: [organizationId, parentId], references: [organizationId, id], onDelete: Restrict)
+  children         Account[]          @relation("AccountHierarchy")
+  journalLines     JournalEntryLine[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, type, status])
+  @@map("accounts")
+}
+
+model FiscalPeriod {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  fiscalYear     Int                @map("fiscal_year")
+  periodNumber   Int                @map("period_number")
+  startsAt       DateTime           @map("starts_at") @db.Date
+  endsAt         DateTime           @map("ends_at") @db.Date
+  status         FiscalPeriodStatus @default(OPEN)
+  closedAt       DateTime?          @map("closed_at") @db.Timestamptz(6)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  entries        JournalEntry[]
+
+  @@unique([organizationId, fiscalYear, periodNumber])
+  @@unique([organizationId, id])
+  @@index([organizationId, status, startsAt, endsAt])
+  @@map("fiscal_periods")
+}
+
+model Journal {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  code           String         @db.VarChar(40)
+  name           String         @db.VarChar(160)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  entries        JournalEntry[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@map("journals")
+}
+
+model JournalEntry {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String             @map("organization_id") @db.Uuid
+  journalId            String             @map("journal_id") @db.Uuid
+  fiscalPeriodId       String             @map("fiscal_period_id") @db.Uuid
+  entryNumber          String             @map("entry_number") @db.VarChar(60)
+  entryDate            DateTime           @map("entry_date") @db.Date
+  sourceType           String             @map("source_type") @db.VarChar(80)
+  sourceId             String             @map("source_id") @db.Uuid
+  currencyId           String             @map("currency_id") @db.Uuid
+  status               JournalEntryStatus @default(DRAFT)
+  description          String             @db.VarChar(1000)
+  reversalOfId         String?            @map("reversal_of_id") @db.Uuid
+  postedByMembershipId String?            @map("posted_by_membership_id") @db.Uuid
+  postedAt             DateTime?          @map("posted_at") @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  journal              Journal            @relation(fields: [organizationId, journalId], references: [organizationId, id], onDelete: Restrict)
+  fiscalPeriod         FiscalPeriod       @relation(fields: [organizationId, fiscalPeriodId], references: [organizationId, id], onDelete: Restrict)
+  currency             Currency           @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  reversalOf           JournalEntry?      @relation("EntryReversal", fields: [organizationId, reversalOfId], references: [organizationId, id], onDelete: Restrict)
+  reversedBy           JournalEntry?      @relation("EntryReversal")
+  lines                JournalEntryLine[]
+
+  @@unique([organizationId, entryNumber])
+  @@unique([organizationId, sourceType, sourceId])
+  @@unique([organizationId, reversalOfId])
+  @@unique([organizationId, id])
+  @@index([organizationId, fiscalPeriodId, entryDate])
+  @@index([organizationId, status])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  journalEntryId String       @map("journal_entry_id") @db.Uuid
+  lineNumber     Int          @map("line_number")
+  accountId      String       @map("account_id") @db.Uuid
+  debit          Decimal      @default(0) @db.Decimal(19, 4)
+  credit         Decimal      @default(0) @db.Decimal(19, 4)
+  currencyId     String       @map("currency_id") @db.Uuid
+  description    String?      @db.VarChar(500)
+  entry          JournalEntry @relation(fields: [organizationId, journalEntryId], references: [organizationId, id], onDelete: Restrict)
+  account        Account      @relation(fields: [organizationId, accountId], references: [organizationId, id], onDelete: Restrict)
+  currency       Currency     @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  @@unique([journalEntryId, lineNumber])
+  @@index([accountId, journalEntryId])
+  @@map("journal_entry_lines")
+}
+
+model Adjustment {
+  id                     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String           @map("organization_id") @db.Uuid
+  sourceType             String           @map("source_type") @db.VarChar(80)
+  sourceId               String           @map("source_id") @db.Uuid
+  reason                 String           @db.VarChar(1000)
+  status                 AdjustmentStatus @default(DRAFT)
+  createdByMembershipId  String           @map("created_by_membership_id") @db.Uuid
+  approvedByMembershipId String?          @map("approved_by_membership_id") @db.Uuid
+  journalEntryId         String?          @map("journal_entry_id") @db.Uuid
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, sourceType, sourceId, id])
+  @@index([organizationId, status, createdAt])
+  @@map("adjustments")
+}
+
+model AuditLog {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  actorMembershipId String?  @map("actor_membership_id") @db.Uuid
+  action            String   @db.VarChar(120)
+  entityType        String   @map("entity_type") @db.VarChar(120)
+  entityId          String?  @map("entity_id") @db.Uuid
+  requestId         String   @map("request_id") @db.VarChar(100)
+  ipAddress         String?  @map("ip_address") @db.Inet
+  userAgent         String?  @map("user_agent") @db.Text
+  beforeJson        Json?    @map("before_json")
+  afterJson         Json?    @map("after_json")
+  metadataJson      Json?    @map("metadata_json")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorMembershipId, createdAt])
+  @@index([requestId])
+  @@map("audit_logs")
+}
+
+model IdempotencyKey {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  endpoint       String            @db.VarChar(200)
+  key            String            @db.VarChar(200)
+  requestHash    String            @map("request_hash") @db.VarChar(128)
+  status         IdempotencyStatus @default(PROCESSING)
+  responseStatus Int?              @map("response_status")
+  responseBody   Json?             @map("response_body")
+  resourceType   String?           @map("resource_type") @db.VarChar(100)
+  resourceId     String?           @map("resource_id") @db.Uuid
+  lockedAt       DateTime?         @map("locked_at") @db.Timestamptz(6)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime          @map("expires_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, endpoint, key])
+  @@index([status, expiresAt])
+  @@map("idempotency_keys")
+}
+
+model OutboxEvent {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String       @map("organization_id") @db.Uuid
+  eventType        String       @map("event_type") @db.VarChar(160)
+  aggregateType    String       @map("aggregate_type") @db.VarChar(120)
+  aggregateId      String       @map("aggregate_id") @db.Uuid
+  aggregateVersion Int          @map("aggregate_version")
+  payload          Json
+  status           OutboxStatus @default(PENDING)
+  attempts         Int          @default(0)
+  availableAt      DateTime     @default(now()) @map("available_at") @db.Timestamptz(6)
+  lockedAt         DateTime?    @map("locked_at") @db.Timestamptz(6)
+  lockedBy         String?      @map("locked_by") @db.VarChar(120)
+  lastError        String?      @map("last_error") @db.Text
+  processedAt      DateTime?    @map("processed_at") @db.Timestamptz(6)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, aggregateType, aggregateId, aggregateVersion, eventType])
+  @@index([status, availableAt, lockedAt])
+  @@index([aggregateType, aggregateId, createdAt])
+  @@map("outbox_events")
+}
+
+model NumberSequence {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  branchId       String?             @map("branch_id") @db.Uuid
+  code           String              @db.VarChar(60)
+  scope          NumberSequenceScope @default(ORGANIZATION)
+  prefix         String?             @db.VarChar(30)
+  nextValue      BigInt              @default(1) @map("next_value")
+  padding        Int                 @default(6)
+  version        Int                 @default(0)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, branchId, code])
+  @@index([organizationId, code])
+  @@map("number_sequences")
+}
